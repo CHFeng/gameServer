@@ -13,9 +13,11 @@ var accountSchema = new mongoose.Schema({
     eventId: Number,
     score: String,
     date: Date,
+}, {
+    collection: "AccountDatas"
 });
 
-var accountRecord = mongoose.model('AccountRecord', accountSchema);
+var accountData = mongoose.model('AccountDatas', accountSchema);
 
 // 定義機台設定結構
 var MachineSettingSchema = new mongoose.Schema({
@@ -51,12 +53,14 @@ var SpinDataSchema = new mongoose.Schema({
     gameVersionId: String,
     prizeCount: Number,
     winInfo: []
+}, {
+    collection: "SpinDatas"
 });
 var spinData = mongoose.model('SpinData', SpinDataSchema);
 
 exports.writeAccount = function (clientId, receiveData) {
     var dataIdx = 0;
-    var newRecord = new accountRecord();
+    var newRecord = new accountData();
 
     newRecord.clientId = clientId;
     newRecord.eventId = receiveData.readUInt8(dataIdx++);
@@ -138,4 +142,11 @@ exports.writeSpin = function (clientId, receiveData) {
     }
 
     console.log(newSpinData);
+    newSpinData.save(function (err) {
+        if (err) {
+            console.log("write spin data to DB fail");
+        } else {
+            console.log("write spin data success");
+        }
+    });
 }
