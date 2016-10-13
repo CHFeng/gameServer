@@ -45,9 +45,7 @@ var SpinDataSchema = new mongoose.Schema({
     credit: Number,
     bet: Number,
     win: Number,
-    sWin: Number,
     betRate: Number,
-    sCount: Number,
     gameMode: Number,
     date: Date,
     gameVersionId: String,
@@ -120,10 +118,7 @@ exports.writeSpin = function (clientId, receiveData) {
     dataIdx += 4;
     newSpinData.win = receiveData.readUInt32LE(dataIdx);
     dataIdx += 4;
-    newSpinData.sWin = receiveData.readUInt32LE(dataIdx);
-    dataIdx += 4;
     newSpinData.betRate = receiveData.readUInt8(dataIdx++);
-    newSpinData.sCount = receiveData.readUInt8(dataIdx++);
     newSpinData.gameMode = receiveData.readUInt8(dataIdx++);
     newSpinData.date = new Date((2000 + receiveData[dataIdx++]), receiveData[dataIdx++] - 1, receiveData[dataIdx++],
         receiveData[dataIdx++], receiveData[dataIdx++], receiveData[dataIdx++]);
@@ -133,9 +128,8 @@ exports.writeSpin = function (clientId, receiveData) {
 
     for (var i = 0; i < newSpinData.prizeCount; i++) {
         var item = {
-            winItem: receiveData.readUInt8(dataIdx++),
-            winType: receiveData.readUInt8(dataIdx++),
-            winScore: receiveData.readUInt32LE(dataIdx)
+            prizeIdx: receiveData.readUInt8(dataIdx++),
+            prizeScore: receiveData.readUInt32LE(dataIdx)
         }
         dataIdx += 4;
         newSpinData.winInfo.push(item);
