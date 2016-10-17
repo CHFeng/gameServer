@@ -36,7 +36,7 @@ exports.gameParser = function(sock, data) {
     dataLen = data.readUInt16LE(2);
     cmdData = data.slice(4);
     
-    console.log("Command is %d from Remote port:%d", cmd, sock.remotePort);
+    //console.log("Command is %d from Remote port:%d", cmd, sock.remotePort);
     switch (cmd) {
         case netEventList.EVENT_ACCOUNT:
             eventAccount(clientId, cmdData);
@@ -63,9 +63,6 @@ exports.gameParser = function(sock, data) {
 * 處理帳目事件
 */
 function eventAccount(clientId, cmdData) {
-    console.log("thie command is ACCOUNT from client:%d", clientId);
-    console.log("Data is:", cmdData);
-
     db.writeAccount(clientId, cmdData);
 }
 

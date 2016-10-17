@@ -4,8 +4,8 @@
 
 var mongoose = require('mongoose');
 //use mongoose to connect mongoDB
-//mongoose.connect('mongodb://192.168.1.129/GMS');
-mongoose.connect('mongodb://localhost/GMS');
+mongoose.connect('mongodb://192.168.1.129/GMS');
+//mongoose.connect('mongodb://localhost/GMS');
 
 //account record data struct
 var accountSchema = new mongoose.Schema({
@@ -62,24 +62,25 @@ exports.writeAccount = function (clientId, receiveData) {
 
     newRecord.clientId = clientId;
     newRecord.eventId = receiveData.readUInt8(dataIdx++);
-    newRecord.score = receiveData.readUInt32LE(dataIdx);
-    dataIdx += 4;
+    newRecord.score = receiveData.readDoubleLE(dataIdx);
+    dataIdx += 8;
     //JavaScript counts months from 0 to 11. January is 0. December is 11.
     newRecord.date = new Date((2000 + receiveData[dataIdx++]), receiveData[dataIdx++] - 1, receiveData[dataIdx++],
         receiveData[dataIdx++], receiveData[dataIdx++], receiveData[dataIdx++]);
 
+    /*
     console.log("write account record to DB");
     console.log("Client ID:%d", newRecord.clientId);
     console.log("Event ID:%d", newRecord.eventId);
     console.log("Value:%d", newRecord.score);
     console.log(newRecord.date);
-
+    */
     newRecord.save(function (err) {
         if (err) {
             console.log("write account record to DB fail");
-        } else {
+        } /*else {
             console.log("write account record success");
-        }
+        }*/
     });
 }
 
@@ -135,12 +136,12 @@ exports.writeSpin = function (clientId, receiveData) {
         newSpinData.winInfo.push(item);
     }
 
-    console.log(newSpinData);
+    //console.log(newSpinData);
     newSpinData.save(function (err) {
         if (err) {
             console.log("write spin data to DB fail");
-        } else {
+        } /*else {
             console.log("write spin data success");
-        }
+        }*/
     });
 }
