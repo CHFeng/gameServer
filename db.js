@@ -11,7 +11,7 @@ mongoose.connect('mongodb://192.168.1.129/GMS');
 var accountSchema = new mongoose.Schema({
     clientId: Number,
     eventId: Number,
-    score: String,
+    score: Number,
     date: Date,
 }, {
     collection: "AccountDatas"
