@@ -13,6 +13,7 @@ var accountSchema = new mongoose.Schema({
     eventId: Number,
     score: Number,
     date: Date,
+    memberId: Number,
 }, {
     collection: "AccountDatas"
 });
@@ -50,6 +51,7 @@ var SpinDataSchema = new mongoose.Schema({
     date: Date,
     gameVersionId: String,
     prizeCount: Number,
+    memberId: Number,
     winInfo: []
 }, {
     collection: "SpinDatas"
@@ -66,14 +68,16 @@ exports.writeAccount = function (clientId, receiveData) {
     dataIdx += 8;
     //JavaScript counts months from 0 to 11. January is 0. December is 11.
     newRecord.date = new Date((2000 + receiveData[dataIdx++]), receiveData[dataIdx++] - 1, receiveData[dataIdx++],
-        receiveData[dataIdx++], receiveData[dataIdx++], receiveData[dataIdx++]);
-
+                            receiveData[dataIdx++], receiveData[dataIdx++], receiveData[dataIdx++]);
+    
+    newRecord.memberId = receiveData.readUInt32LE(dataIdx);
     /*
     console.log("write account record to DB");
     console.log("Client ID:%d", newRecord.clientId);
     console.log("Event ID:%d", newRecord.eventId);
     console.log("Value:%d", newRecord.score);
     console.log(newRecord.date);
+    console.log("Member ID:%d", newRecord.memberId);
     */
     newRecord.save(function (err) {
         if (err) {
@@ -126,6 +130,8 @@ exports.writeSpin = function (clientId, receiveData) {
     newSpinData.gameVersionId = receiveData.slice(dataIdx, dataIdx + 10);
     dataIdx += 10;
     newSpinData.prizeCount = receiveData.readUInt8(dataIdx++);
+    newSpinData.memberId = receiveData.readUInt32LE(dataIdx);
+    dataIdx += 4;
 
     for (var i = 0; i < newSpinData.prizeCount; i++) {
         var item = {

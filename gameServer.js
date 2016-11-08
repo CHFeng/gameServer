@@ -1,9 +1,9 @@
 
 var HOST = '192.168.1.108';
 /* for game connect port */
-var GAME_PORT = 1688;
+var GAME_PORT = 16888;
 /* for web connect port */
-var WEB_PORT = 1689;
+var WEB_PORT = 16889;
 
 var net = require('net');
 var gameServer = net.createServer(gameClientHandle);
