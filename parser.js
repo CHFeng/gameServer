@@ -24,8 +24,39 @@ var netEventList = {
     //報帳
     EVENT_REPORT: 6
 };
+
 exports.clientStatus = clientStatus;
-exports.gameParser = function(sock, data) {
+
+exports.webParser = function(sock, data) {
+    var cmd;
+    var dataLen;
+    var cmdData;
+
+    cmd = data.readUInt8(0);
+    dataLen = data.readUInt16LE(1);
+    if (dataLen > 0) {
+        cmdData = data.slice(3);
+    }
+
+    switch (cmd) {
+        case 1: //查詢分機連線狀態
+            var writeData = new Buffer(100);
+            writeData.fill(0);
+            for (var i = 0; i < clientStatus.length; i++) {
+                if (clientStatus[i].linkState == true) {
+                    writeData.writeUInt8(1, clientStatus[i].clientId - 1);
+                }
+            }
+            sock.write(writeData);
+            break;
+        case 2: //更新分機鎖機時間
+            break;
+        case 3: //執行分機鎖機
+            break;
+    }
+}
+
+exports.gameParser = function(clientIdx, data) {
     var clientId;
     var cmd;
     var dataLen;
@@ -36,6 +67,9 @@ exports.gameParser = function(sock, data) {
     dataLen = data.readUInt16LE(2);
     cmdData = data.slice(4);
     
+    clientStatus[clientIdx].clientId = clientId;
+    clientStatus[clientIdx].linkState = true;
+
     //console.log("Command is %d from Remote port:%d", cmd, sock.remotePort);
     switch (cmd) {
         case netEventList.EVENT_ACCOUNT:
@@ -48,7 +82,9 @@ exports.gameParser = function(sock, data) {
             eventMember(clientId, cmdData);
             break;
         case netEventList.EVENT_SETUP:
-            eventSetup(clientId, cmdData, sock);
+            if (clientIdx >= 0) {
+                eventSetup(clientId, cmdData, clientIdx);
+            }
             break;
         case netEventList.EVENT_SHIFT:
             eventShift(cmdData);
@@ -82,9 +118,9 @@ function eventMember(clientId, cmdData) {
 /*
 * 處理遊戲設定事件, read db then write to sock
 */
-function eventSetup(id, cmdData, sock) {
-    clientStatus[sock.key].linkState = true;
-    clientStatus[sock.key].clientId = id;
+function eventSetup(id, cmdData, clientIdx) {
+    clientStatus[clientIdx].linkState = true;
+    clientStatus[clientIdx].clientId = id;
 
     db.readGameSetup(id, cmdData, function(gameSetup, gameVersionId) {
         var writeData = new Buffer(gameSetup.length + 3 + 16);
@@ -114,7 +150,7 @@ function eventSetup(id, cmdData, sock) {
             writeData.writeUInt8(value, dataIdx++);
         }
 
-        sock.write(writeData);
+        clientStatus[clientIdx].sock.write(writeData);
     })
 }
 
