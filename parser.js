@@ -22,7 +22,11 @@ var netEventList = {
     //交班
     EVENT_SHIFT: 5,
     //報帳
-    EVENT_REPORT: 6
+    EVENT_REPORT: 6,
+    //更新鎖機時間
+    EVENT_UPDATE_LOCK_TIME: 7,
+    //更新鎖機狀態
+    EVENT_LOCK_STATUS: 8,
 };
 
 exports.clientStatus = clientStatus;
@@ -50,8 +54,36 @@ exports.webParser = function(sock, data) {
             sock.write(writeData);
             break;
         case 2: //更新分機鎖機時間
+            var writeData = new Buffer(4 + 6);
+            var dataIdx = 0;
+            //sendId
+            writeData.writeUInt8(SERVER_ID, dataIdx++);
+            //command
+            writeData.writeUInt8(netEventList.EVENT_UPDATE_LOCK_TIME, dataIdx++);
+            //command data length
+            writeData.writeUInt16(6, dataIdx);
+            dataIdx += 2;
+            //update lock time data
+            for (var i = 0; i < 6; i++) {
+                writeData.writeUInt8(cmdData[i], dataIdx++);
+            }
+
+            sendCmdToClient(writeData);
             break;
-        case 3: //執行分機鎖機
+        case 3: //執行分機鎖機功能
+            var writeData = new Buffer(4 + 1);
+            var dataIdx = 0;
+            //sendId
+            writeData.writeUInt8(SERVER_ID, dataIdx++);
+            //command
+            writeData.writeUInt8(netEventList.EVENT_LOCK_STATUS, dataIdx++);
+            //command data length
+            writeData.writeUInt16(1, dataIdx);
+            dataIdx += 2;
+            //update lock status event
+            writeData.writeUInt8(cmdData[0], dataIdx++);
+
+            sendCmdToClient(writeData);
             break;
     }
 }
@@ -123,7 +155,7 @@ function eventSetup(id, cmdData, clientIdx) {
     clientStatus[clientIdx].clientId = id;
 
     db.readGameSetup(id, cmdData, function(gameSetup, gameVersionId) {
-        var writeData = new Buffer(gameSetup.length + 3 + 16);
+        var writeData = new Buffer(gameSetup.length + 4 + 16);
         var dataIdx = 0;
         gameVersionId = "BA01D_TC01";
         //sendId
@@ -164,4 +196,15 @@ function eventShift(cmdData) {
 * 處理報帳事件
 */
 function eventReport(cmdData) {
+}
+
+/*
+* 傳送命令給所有分機
+*/
+function sendCmdToClient(writeData) {
+    for (var i = 0; i < clientStatus.length; i++) {
+        if (clientStatus[i].linkState == true) {
+            clientStatus[i].sock.write(writeData);
+        }
+    }
 }
