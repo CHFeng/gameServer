@@ -207,6 +207,19 @@ function RSADecrypt(ctext) {
 	return pkcs1unpad2(m, (RSAKey.n.bitLength() + 7) >> 3);
 }
 
+// Return the RSA decryption of "ctext".
+// "ctext" is an hex string and the output is a plain string.
+function RSADecryptNoPKCS(ctext) {
+	var c = parseBigInt(ctext, 16);
+	var m = RSADoPrivate(c);
+	if (m == null)
+		return null;
+	var result = "";
+	for (var i = m.t - 1; i >= 0; i--)
+		result += m[i].toString(16);
+	return result;
+}
+
 function RSAParseKey(pem) {
   try {
     var Base64 = require('./base64.js').Base64;
@@ -278,7 +291,8 @@ function RSAParseKey(pem) {
 RSAKey.init = RSAInit;
 RSAKey.setPublic = RSASetPublic;
 RSAKey.setPrivate = RSASetPrivate;
-RSAKey.decrypt = RSADecrypt;
+RSAKey.decrypt = RSADecryptNoPKCS;
+RSAKey.decryptPKCS1 = RSADecrypt;
 RSAKey.encrypt = RSAEncrypt;
 RSAKey.linebrk = RSALinebrk;
 // exports
