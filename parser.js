@@ -34,10 +34,8 @@ var netEventList = {
     EVENT_LOCK_STATUS: 8,
     /** 更新水池資訊 */
     EVENT_SPIN_ACK: 9,
-    /** 新增連線獎項 */
-    EVENT_ADD_LINK_PRIZE: 10,
     /** 派送連線獎項給分機 */
-    EVENT_DISPATCH_LINK_PRIZE: 11,
+    EVENT_DISPATCH_LINK_PRIZE: 10,
 };
 
 exports.clientlinkStatus = clientlinkStatus;
@@ -68,32 +66,13 @@ exports.webParser = function(sock, data) {
             sock.write(writeData);
             break;
         case 2: //更新分機鎖機時間
-            sendCmdToClient(netEventList.EVENT_LOCK_TIME, cmdData, 6);
+            sendCmdToClient(255, netEventList.EVENT_LOCK_TIME, cmdData, 6);
             break;
         case 3: //執行分機鎖機功能
-            sendCmdToClient(netEventList.EVENT_LOCK_STATUS, cmdData, 1);
+            sendCmdToClient(255, netEventList.EVENT_LOCK_STATUS, cmdData, 1);
             break;
     }
 }
-
-/** JP檯面分數(3) + YBuffer(5*4) + ZBuffer(3), 都是double type + 連線獎項序號u16 */
-var bufferValue = new Buffer(26*8);
-var fs = require("fs");
-
-/** 
-* read buffer value from file
-*/
-(function readBuf() {
-    fs.readFile("bufferValue.txt", function(err, data){
-        if (err) {
-            console.log("read buffer value from file error");
-        } else {
-            bufferValue.fill(0, 0, bufferValue.length);
-            data.copy(bufferValue, 0, 0, bufferValue.length);
-            linkPrizeSerial = data.slice(0, bufferValue.length);
-        }
-    });
-})();
 
 /**
  * 與分機板之間的通訊處理
@@ -136,7 +115,7 @@ exports.gameParser = function(clientIdx, data) {
             break;
         case netEventList.EVENT_REPORT:
             eventReport(cmdData);
-            break;    
+            break;  
     }
 }
 
@@ -224,9 +203,9 @@ function eventReport(cmdData) {
 }
 
 /**
- * 傳送命令給所有分機
+ * 傳送命令給分機, 當id = 255時傳送給所有分機, 否則則為單一台分機的號碼
  */
-function sendCmdToClient(cmd, cmdData, len) {
+function sendCmdToClient(id, cmd, cmdData, len) {
     var writeData = new Buffer(4 + len);
     var dataIdx = 0;
     //sendId
@@ -241,10 +220,14 @@ function sendCmdToClient(cmd, cmdData, len) {
         writeData.writeUInt8(cmdData[i], dataIdx++);
     }
 
-    for (var i = 0; i < clientlinkStatus.length; i++) {
-        if (clientlinkStatus[i].linked == true) {
-            clientlinkStatus[i].sock.write(writeData);
+    if (id == 255) {
+        for (var i = 0; i < clientlinkStatus.length; i++) {
+            if (clientlinkStatus[i].linked == true) {
+                clientlinkStatus[i].sock.write(writeData);
+            }
         }
+    } else if (clientlinkStatus[id].linked == true) {
+            clientlinkStatus[id].sock.write(writeData);
     }
 }
 
@@ -265,5 +248,5 @@ function sendBufData(clientIdx) {
     wData.writeUInt16LE(linkPrizeSerial, dataIdx);
     dataIdx += 2;
 
-    sendCmdToClient(EVENT_SPIN_ACK, wData, dataIdx);
+    sendCmdToClient(clientIdx, EVENT_SPIN_ACK, wData, dataIdx);
 }

@@ -58,6 +58,29 @@ var SpinDataSchema = new mongoose.Schema({
 });
 var spinData = mongoose.model('SpinData', SpinDataSchema);
 
+/** link prize data struct */
+var linkPrizeDataSchema = new mongoose.Schema({
+    /** 是否有大獎 */
+	flag: Boolean,
+	/** 獎項類別 */
+	type: Number,
+	/** 押注區間 */
+	betIdx: Number,
+	/** 哪一台中獎 */
+	clientIdx: Number,
+	/** 序號 */
+	serial: Number,
+	/** 獎項分數 */
+	score: Number,
+	/** 確認時間 */
+	timeCount: Number,
+    /** 產生此獎項的日期與時間 */
+    date: Date,
+}, {
+    collection: "linkPrizeDatas"
+});
+var linkPrizeData = mongoose.model("linkPrizeData", linkPrizeDataSchema);
+
 /**
  * 將帳目事件的資料寫入DB
  */
@@ -159,4 +182,32 @@ exports.writeSpin = function (clientId, receiveData) {
             console.log("write spin data success");
         }*/
     });
+}
+
+/**
+ * 將連線獎項資訊寫入DB
+ */
+exports.writeLinkPrize = function(receiveData) {
+    var dataIdx = 0;
+    var newLinkPrizeData = new linkPrizeData();
+
+    newLinkPrizeData.flag = receiveData.readUInt8(dataIdx++);
+    newLinkPrizeData.type = receiveData.readUInt8(dataIdx++);
+    newLinkPrizeData.betIdx = receiveData.readUInt8(dataIdx++);
+    newLinkPrizeData.clientIdx = receiveData.readUInt8(dataIdx++);
+    newLinkPrizeData.serial = receiveData.readUInt8(dataIdx++);
+    newLinkPrizeData.score = receiveData.readDoubleLE(dataIdx);
+    dataIdx += 8;
+    newLinkPrizeData.timeCount = receiveData.readUInt32LE(dataIdx);
+    newLinkPrizeData.date = new Date();
+
+    //console.log(newLinkPrizeData);
+
+    newLinkPrizeData.save(function (err) {
+        if (err) {
+            console.log("write link Prize data to DB fail");
+        }
+    });
+
+    return newLinkPrizeData;
 }
