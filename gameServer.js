@@ -12,6 +12,10 @@ var webServer = net.createServer(webClientHandle);
 var netParser = require('./parser.js');
 var clientlinkStatus = require('./parser.js').clientlinkStatus;
 
+var randBuf = require("./randBuf.js");
+
+randBuf.init();
+/*
 gameServer.listen(GAME_PORT,  function() {
     console.log('gameServer listening on ' + gameServer.address().address +':'+ gameServer.address().port);
 });
@@ -19,6 +23,7 @@ gameServer.listen(GAME_PORT,  function() {
 webServer.listen(WEB_PORT,  function() {
     console.log('webServer listening on ' + webServer.address().address +':'+ webServer.address().port);
 });
+*/
 
 /**
  * 新增一個物件到clientlinkStatus的陣列中來進行client狀態的追蹤
