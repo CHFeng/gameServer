@@ -10,7 +10,7 @@ var gameServer = net.createServer(gameClientHandle);
 var webServer = net.createServer(webClientHandle);
 
 var netParser = require('./parser.js');
-var clientStatus = require('./parser.js').clientStatus;
+var clientlinkStatus = require('./parser.js').clientlinkStatus;
 
 gameServer.listen(GAME_PORT,  function() {
     console.log('gameServer listening on ' + gameServer.address().address +':'+ gameServer.address().port);
@@ -21,23 +21,23 @@ webServer.listen(WEB_PORT,  function() {
 });
 
 /*
-* 新增一個物件到clientStatus的陣列中來進行client狀態的追蹤
+* 新增一個物件到clientlinkStatus的陣列中來進行client狀態的追蹤
 */
 function addNewClient(sock) {
     var newClient = {};
 
     newClient.sock = sock;
-    newClient.linkState = false;
+    newClient.linked = false;
     newClient.clientId = 1;
-    clientStatus.push(newClient);
+    clientlinkStatus.push(newClient);
 }
 
 /*
 * 尋找要處理通訊的client socket index
 */
 function findClitnIdx(sock) {
-    for (var i = 0; i < clientStatus.length; i++) {
-        if (clientStatus[i].sock == sock) {
+    for (var i = 0; i < clientlinkStatus.length; i++) {
+        if (clientlinkStatus[i].sock == sock) {
             return i;
         }
     }
@@ -59,7 +59,7 @@ function gameClientHandle(sock) {
 
         //remove client status from array
         if (clientIdx >= 0) {
-            clientStatus.splice(clientIdx, 1);
+            clientlinkStatus.splice(clientIdx, 1);
         }
     });
     

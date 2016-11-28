@@ -8,7 +8,12 @@ var SERVER_ID = 250;
 var NET_PROTOCOL_VER = 0x10;
 
 var db = require("./db.js");
-var clientStatus = [];
+/** 分機連線狀態的陣列 */
+var clientlinkStatus = [];
+/** 分機連上系統的數量狀態 */
+var clientOnLineState;
+/** 連線獎項serial number */
+var linkPrizeSerial;
 
 var netEventList = {
     //帳目相關事件
@@ -27,9 +32,11 @@ var netEventList = {
     EVENT_LOCK_TIME: 7,
     //更新鎖機狀態
     EVENT_LOCK_STATUS: 8,
+    //更新水池資訊
+    EVENT_SPIN_ACK: 9,
 };
 
-exports.clientStatus = clientStatus;
+exports.clientlinkStatus = clientlinkStatus;
 
 exports.webParser = function(sock, data) {
     var cmd;
@@ -46,9 +53,9 @@ exports.webParser = function(sock, data) {
         case 1: //查詢分機連線狀態
             var writeData = new Buffer(100);
             writeData.fill(0);
-            for (var i = 0; i < clientStatus.length; i++) {
-                if (clientStatus[i].linkState == true) {
-                    writeData.writeUInt8(1, clientStatus[i].clientId - 1);
+            for (var i = 0; i < clientlinkStatus.length; i++) {
+                if (clientlinkStatus[i].linked == true) {
+                    writeData.writeUInt8(1, clientlinkStatus[i].clientId - 1);
                 }
             }
             sock.write(writeData);
@@ -62,6 +69,24 @@ exports.webParser = function(sock, data) {
     }
 }
 
+//JP檯面分數(3) + YBuffer(5*4) + ZBuffer(3), 都是double type + 連線獎項序號u16
+var bufferValue = new Buffer(26*8);
+var fs = require("fs");
+
+//read buffer value from file
+(function readBuf() {
+    fs.readFile("bufferValue.txt", function(err, data){
+        if (err) {
+            console.log("read buffer value from file error");
+        } else {
+            bufferValue.fill(0, 0, bufferValue.length);
+            data.copy(bufferValue, 0, 0, bufferValue.length);
+            linkPrizeSerial = data.slice(0, bufferValue.length);
+        }
+    });
+})();
+
+
 exports.gameParser = function(clientIdx, data) {
     var clientId;
     var cmd;
@@ -73,8 +98,9 @@ exports.gameParser = function(clientIdx, data) {
     dataLen = data.readUInt16LE(2);
     cmdData = data.slice(4);
     
-    clientStatus[clientIdx].clientId = clientId;
-    clientStatus[clientIdx].linkState = true;
+    //測試用
+    clientlinkStatus[clientIdx].clientId = clientId;
+    clientlinkStatus[clientIdx].linked = true;
 
     //console.log("Command is %d from Remote port:%d", cmd, sock.remotePort);
     switch (cmd) {
@@ -83,6 +109,8 @@ exports.gameParser = function(clientIdx, data) {
             break;
         case netEventList.EVENT_SPIN:
             eventSpin(clientId, cmdData);
+            //回傳水池資訊給分機
+            sendBufData(clientIdx);
             break;
         case netEventList.EVENT_MEMBER:
             eventMember(clientId, cmdData);
@@ -112,7 +140,19 @@ function eventAccount(clientId, cmdData) {
 * 處理SPIN事件
 */
 function eventSpin(clientId, cmdData) {
-    db.writeSpin(clientId, cmdData);
+    var dataIdx = 0;
+
+    //讀取水池資訊
+    for (var i = 0; i < 26; i++) {
+        var value = bufferValue.readDoubleLE(dataIdx) + cmdData.readDoubleLE(dataIdx);
+        bufferValue.writeDoubleLE(dataIdx);
+        dataIdx += 8;
+    }
+    
+    fs.writeFile("bufferValue.txt", bufferValue);
+
+    //將水池資訊的部分從接收資料中移除,傳遞給DB的部分來處理
+    db.writeSpin(clientId, cmdData.slice(0, dataIdx));
 }
 
 /*
@@ -125,8 +165,8 @@ function eventMember(clientId, cmdData) {
 * 處理遊戲設定事件, read db then write to sock
 */
 function eventSetup(id, cmdData, clientIdx) {
-    clientStatus[clientIdx].linkState = true;
-    clientStatus[clientIdx].clientId = id;
+    clientlinkStatus[clientIdx].linked = true;
+    clientlinkStatus[clientIdx].clientId = id;
 
     db.readGameSetup(id, cmdData, function(gameSetup, gameVersionId) {
         var writeData = new Buffer(gameSetup.length + 4 + 16);
@@ -156,7 +196,7 @@ function eventSetup(id, cmdData, clientIdx) {
             writeData.writeUInt8(value, dataIdx++);
         }
 
-        clientStatus[clientIdx].sock.write(writeData);
+        clientlinkStatus[clientIdx].sock.write(writeData);
     })
 }
 
@@ -190,9 +230,29 @@ function sendCmdToClient(cmd, cmdData, len) {
         writeData.writeUInt8(cmdData[i], dataIdx++);
     }
 
-    for (var i = 0; i < clientStatus.length; i++) {
-        if (clientStatus[i].linkState == true) {
-            clientStatus[i].sock.write(writeData);
+    for (var i = 0; i < clientlinkStatus.length; i++) {
+        if (clientlinkStatus[i].linked == true) {
+            clientlinkStatus[i].sock.write(writeData);
         }
     }
+}
+
+/*
+* 傳送目前水池累積分數,JP檯面分數,分機狀態傳給分機
+*/
+function sendBufData(clientIdx) {
+    var wData = new Buffer(1 + 2 + 26*8);
+    var dataIdx = 0;
+
+    wData.fill(0, 0, wData.length);
+
+    wData.writeUInt8(clientOnLineState, dataIdx++);
+    //copy buffer data to send
+    bufferValue.copy(wData, dataIdx, 0, bufferValue.length);
+    dataIdx += bufferValue.length;
+    
+    wData.writeUInt16LE(linkPrizeSerial, dataIdx);
+    dataIdx += 2;
+
+    sendCmdToClient(EVENT_SPIN_ACK, wData, dataIdx);
 }
