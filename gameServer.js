@@ -1,8 +1,8 @@
 
 var HOST = '192.168.1.108';
-/* for game connect port */
+/** for game connect port */
 var GAME_PORT = 16888;
-/* for web connect port */
+/** for web connect port */
 var WEB_PORT = 16889;
 
 var net = require('net');
@@ -20,9 +20,9 @@ webServer.listen(WEB_PORT,  function() {
     console.log('webServer listening on ' + webServer.address().address +':'+ webServer.address().port);
 });
 
-/*
-* 新增一個物件到clientlinkStatus的陣列中來進行client狀態的追蹤
-*/
+/**
+ * 新增一個物件到clientlinkStatus的陣列中來進行client狀態的追蹤
+ */
 function addNewClient(sock) {
     var newClient = {};
 
@@ -32,9 +32,9 @@ function addNewClient(sock) {
     clientlinkStatus.push(newClient);
 }
 
-/*
-* 尋找要處理通訊的client socket index
-*/
+/**
+ * 尋找要處理通訊的client socket index
+ */
 function findClitnIdx(sock) {
     for (var i = 0; i < clientlinkStatus.length; i++) {
         if (clientlinkStatus[i].sock == sock) {
@@ -45,6 +45,9 @@ function findClitnIdx(sock) {
     return -1;
 }
 
+/**
+ * 處理分機板之間的Socket event
+ */
 function gameClientHandle(sock) {
     //add new client to track
     addNewClient(sock);
@@ -77,6 +80,9 @@ function gameClientHandle(sock) {
     });
 }
 
+/**
+ * 處理web interface之間的socket event
+ */
 function webClientHandle(sock) {
     sock.key = sock.remoteAddress +':'+ sock.remotePort;
 

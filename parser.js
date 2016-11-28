@@ -16,28 +16,35 @@ var clientOnLineState;
 var linkPrizeSerial;
 
 var netEventList = {
-    //帳目相關事件
+    /** 帳目相關事件 */
     EVENT_ACCOUNT: 1,
-    //遊戲事件
+    /** 遊戲事件 */
     EVENT_SPIN: 2,
-    //會員事件
+    /** 會員事件 */
     EVENT_MEMBER: 3,
-    //設定頁資訊
+    /** 設定頁資訊 */
     EVENT_SETUP: 4,
-    //交班
+    /** 交班 */
     EVENT_SHIFT: 5,
-    //報帳
+    /** 報帳 */
     EVENT_REPORT: 6,
-    //更新鎖機時間
+    /** 更新鎖機時間 */
     EVENT_LOCK_TIME: 7,
-    //更新鎖機狀態
+    /** 更新鎖機狀態 */
     EVENT_LOCK_STATUS: 8,
-    //更新水池資訊
+    /** 更新水池資訊 */
     EVENT_SPIN_ACK: 9,
+    /** 新增連線獎項 */
+    EVENT_ADD_LINK_PRIZE: 10,
+    /** 派送連線獎項給分機 */
+    EVENT_DISPATCH_LINK_PRIZE: 11,
 };
 
 exports.clientlinkStatus = clientlinkStatus;
 
+/** 
+* 與web Interface的相關資料傳遞
+*/
 exports.webParser = function(sock, data) {
     var cmd;
     var dataLen;
@@ -69,11 +76,13 @@ exports.webParser = function(sock, data) {
     }
 }
 
-//JP檯面分數(3) + YBuffer(5*4) + ZBuffer(3), 都是double type + 連線獎項序號u16
+/** JP檯面分數(3) + YBuffer(5*4) + ZBuffer(3), 都是double type + 連線獎項序號u16 */
 var bufferValue = new Buffer(26*8);
 var fs = require("fs");
 
-//read buffer value from file
+/** 
+* read buffer value from file
+*/
 (function readBuf() {
     fs.readFile("bufferValue.txt", function(err, data){
         if (err) {
@@ -86,7 +95,9 @@ var fs = require("fs");
     });
 })();
 
-
+/**
+ * 與分機板之間的通訊處理
+ */
 exports.gameParser = function(clientIdx, data) {
     var clientId;
     var cmd;
@@ -129,16 +140,16 @@ exports.gameParser = function(clientIdx, data) {
     }
 }
 
-/*
-* 處理帳目事件
-*/
+/**
+ * 處理帳目事件
+ */
 function eventAccount(clientId, cmdData) {
     db.writeAccount(clientId, cmdData);
 }
 
-/*
-* 處理SPIN事件
-*/
+/**
+ * 處理SPIN事件
+ */
 function eventSpin(clientId, cmdData) {
     var dataIdx = 0;
 
@@ -155,15 +166,15 @@ function eventSpin(clientId, cmdData) {
     db.writeSpin(clientId, cmdData.slice(0, dataIdx));
 }
 
-/*
-* 處理會員事件, read db then write to sock
-*/
+/**
+ * 處理會員事件, read db then write to sock
+ */
 function eventMember(clientId, cmdData) {
 }
 
-/*
-* 處理遊戲設定事件, read db then write to sock
-*/
+/**
+ * 處理遊戲設定事件, read db then write to sock
+ */
 function eventSetup(id, cmdData, clientIdx) {
     clientlinkStatus[clientIdx].linked = true;
     clientlinkStatus[clientIdx].clientId = id;
@@ -200,21 +211,21 @@ function eventSetup(id, cmdData, clientIdx) {
     })
 }
 
-/*
-* 處理交班事件
-*/
+/**
+ * 處理交班事件
+ */
 function eventShift(cmdData) {
 }
 
-/*
-* 處理報帳事件
-*/
+/**
+ * 處理報帳事件
+ */
 function eventReport(cmdData) {
 }
 
-/*
-* 傳送命令給所有分機
-*/
+/**
+ * 傳送命令給所有分機
+ */
 function sendCmdToClient(cmd, cmdData, len) {
     var writeData = new Buffer(4 + len);
     var dataIdx = 0;
@@ -237,9 +248,9 @@ function sendCmdToClient(cmd, cmdData, len) {
     }
 }
 
-/*
-* 傳送目前水池累積分數,JP檯面分數,分機狀態傳給分機
-*/
+/**
+ * 傳送目前水池累積分數,JP檯面分數,分機狀態傳給分機
+ */
 function sendBufData(clientIdx) {
     var wData = new Buffer(1 + 2 + 26*8);
     var dataIdx = 0;

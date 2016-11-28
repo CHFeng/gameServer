@@ -1,13 +1,13 @@
-/*
-* 將相關資訊寫入資料庫
-*/
+/**
+ * 將相關資訊寫入資料庫
+ */
 
 var mongoose = require('mongoose');
-//use mongoose to connect mongoDB
+/** use mongoose to connect mongoDB */
 mongoose.connect('mongodb://192.168.1.129/GMS');
 //mongoose.connect('mongodb://localhost/GMS');
 
-//account record data struct
+/** account record data struct */
 var accountSchema = new mongoose.Schema({
     clientId: Number,
     eventId: Number,
@@ -20,27 +20,27 @@ var accountSchema = new mongoose.Schema({
 
 var accountData = mongoose.model('AccountDatas', accountSchema);
 
-// 定義機台設定結構
+/** 定義機台設定結構 */
 var MachineSettingSchema = new mongoose.Schema({
-    // 子機編號
+    /** 子機編號 */
     MachineCode: {
         type: String,
         index: {
             unique: true
         }
     },
-    // 遊戲ID
+    /** 遊戲ID */
     GameVersionID: String,
-    // 設定值物件
+    /** 設定值物件 */
     SettingArgs: [],
-    // 設定值陣列
+    /** 設定值陣列 */
     PureSettings: []
 }, {
         collection: "MachineSettings"
     });
 var MachineSettings = mongoose.model('MachineSettings', MachineSettingSchema);
 
-//spin data struct
+/** spin data struct */
 var SpinDataSchema = new mongoose.Schema({
     clientId: Number,
     credit: Number,
@@ -58,6 +58,9 @@ var SpinDataSchema = new mongoose.Schema({
 });
 var spinData = mongoose.model('SpinData', SpinDataSchema);
 
+/**
+ * 將帳目事件的資料寫入DB
+ */
 exports.writeAccount = function (clientId, receiveData) {
     var dataIdx = 0;
     var newRecord = new accountData();
@@ -97,6 +100,9 @@ exports.writeAccount = function (clientId, receiveData) {
     "idxGambleRate",                                       //比倍遊戲機率
     "idxLanguage",                                         //語言
 */
+/**
+ * 根據clientId & gameVerId從DB讀取設定頁資訊
+ */
 exports.readGameSetup = function (clientId, gameVerId, callback) {
     MachineSettings.find({ MachineCode: String(clientId)/*, GameVersionID: gameVerId*/ }, function (err, gameSettingValue) {
         if (err) return console.error(err);
@@ -112,6 +118,9 @@ exports.readGameSetup = function (clientId, gameVerId, callback) {
     });
 }
 
+/**
+ * 將Spin data寫入DB
+ */
 exports.writeSpin = function (clientId, receiveData) {
     var dataIdx = 0;
     var newSpinData = new spinData();
