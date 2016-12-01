@@ -12,7 +12,7 @@ var webServer = net.createServer(webClientHandle);
 var netParser = require('./parser.js');
 var clientlinkStatus = require('./parser.js').clientlinkStatus;
 
-var randBuf = require("./randBuf.js");
+var randBuf = require("./randBuf/randBuf.js");
 
 randBuf.init();
 /*
