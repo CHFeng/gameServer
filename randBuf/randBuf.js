@@ -6,6 +6,8 @@ const fs = require("fs");
 const reserveDataPath = "./randBuf/randBufVal";
 /** 分機最大數量 */
 const MAX_CLIENT_NUM = 100;
+/** 週期性檢查連線獎項與將水池資訊寫入檔案的時間ms */
+const CHECK_PERIOD = 1000;
 
 /** 水池相關資訊的物件 */
 var bufValue = {};
@@ -119,23 +121,61 @@ function randBufInit() {
 
     // 分機連上系統的數量狀態
     randBuf.clientOnLineState = 0;
-    
+
     //初始化分機資訊
     randBuf.clientInfo = {
-        linkState:[],
         linkPrizeCount:[],
         credit:[],
         totalProfit:[],
-        addToLinkBuf:[]
+        addToLinkBuf:[],
+        linkState:[]
     };
 
     for (i = 0; i < MAX_CLIENT_NUM; i++) {
-        randBuf.clientInfo.linkState[i] = 0;
         randBuf.clientInfo.linkPrizeCount[i] = 0;
         randBuf.clientInfo.credit[i] = 0;
         randBuf.clientInfo.totalProfit[i] = 0.0;
         randBuf.clientInfo.addToLinkBuf[i] = 0.0;
+        randBuf.clientInfo.linkState[i] = 0;
     }
+
+    //初始化Y連線獎項資訊
+    randBuf.yPrizeRecord = {};
+    //初始化JP連線獎項資訊
+    randBuf.jpPrizeRecord = {};
+
+    periodCheckBuf();
+}
+
+/**
+ * 週期性檢查是否有連線獎項,並將目前的水資資訊寫入檔案
+ */
+function periodCheckBuf() {
+    let i, count = 0;
+
+    randBuf.Rand_checkLinkPrize(randBuf.clientInfo);
+    randBuf.Rand_updateBufValue(bufValue);
+    randBuf.yPrizeRecord = randBuf.Rand_updateYPrize();
+    randBuf.jpPrizeRecord = randBuf.Rand_updateJpPrize();
+
+    writeBufValToFile();
+
+    //計算分機上線狀態
+    for (i = 0; i < MAX_CLIENT_NUM; i++) {
+        if (randBuf.clientInfo.linkState[i] == true) {
+            count++;
+        }
+    }
+
+    if (count > 80) {
+        randBuf.clientOnLineState = 2;
+    } else if (count > 50) {
+        randBuf.clientOnLineState = 1;
+    } else {
+        randBuf.clientOnLineState = 0;
+    }
+
+    setTimeout(periodCheckBuf, CHECK_PERIOD);
 }
 
 randBuf.init = randBufInit;

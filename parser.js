@@ -174,6 +174,7 @@ function eventMember(clientId, cmdData) {
 function eventSetup(id, cmdData, clientIdx) {
     clientlinkStatus[clientIdx].linked = true;
     clientlinkStatus[clientIdx].clientId = id;
+    randBuf.clientInfo.linkState[id - 1] = true;
 
     db.readGameSetup(id, cmdData, function(gameSetup, gameVersionId) {
         var writeData = new Buffer(gameSetup.length + 4 + 16);
@@ -258,7 +259,7 @@ function sendSpinAck(clientIdx) {
 
     wData.fill(0, 0, wData.length);
 
-    wData.writeUInt8(clientOnLineState, dataIdx++);
+    wData.writeUInt8(randBuf.clientOnLineState, dataIdx++);
     //JP畫面分數
     for (i = 0; i < 3; i++) {
         wData.writeDoubleLE(randBuf.jpScore[i], dataIdx);
@@ -278,5 +279,5 @@ function sendSpinAck(clientIdx) {
     //連線獎項序號,更新本機的連線獎項序號
     wData.writeUInt8(randBuf.prizeSerial, dataIdx++);
 
-    sendCmdToClient(clientIdx, EVENT_SPIN_ACK, wData, dataIdx);
+    sendCmdToClient(clientIdx, netEventList.EVENT_SPIN_ACK, wData, dataIdx);
 }
