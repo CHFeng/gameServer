@@ -1,19 +1,14 @@
-/**
-* 處理網路封包
-* buffer 的操作
-* http://fred-zone.blogspot.tw/2012/03/binary-data-nodejs-buffer-class.html
-* https://nodejs.org/api/buffer.html
-*/
-var SERVER_ID = 250;
-var NET_PROTOCOL_VER = 0x10;
+"use strict";
 
-var db = require("./db.js");
+const SERVER_ID = 250;
+const NET_PROTOCOL_VER = 0x10;
+const MAX_CLIENT_NUM = 100;
+const db = require("./db.js");
+const randBuf = require("./randBuf/randBuf.js");
+
+randBuf.init();
 /** 分機連線狀態的陣列 */
 var clientlinkStatus = [];
-/** 分機連上系統的數量狀態 */
-var clientOnLineState;
-/** 連線獎項serial number */
-var linkPrizeSerial;
 
 var netEventList = {
     /** 帳目相關事件 */
@@ -44,9 +39,7 @@ exports.clientlinkStatus = clientlinkStatus;
 * 與web Interface的相關資料傳遞
 */
 exports.webParser = function(sock, data) {
-    var cmd;
-    var dataLen;
-    var cmdData;
+    let i, cmd, dataLen, cmdData;
 
     cmd = data.readUInt8(0);
     dataLen = data.readUInt16LE(1);
@@ -56,9 +49,9 @@ exports.webParser = function(sock, data) {
 
     switch (cmd) {
         case 1: //查詢分機連線狀態
-            var writeData = new Buffer(100);
+            let writeData = new Buffer(100);
             writeData.fill(0);
-            for (var i = 0; i < clientlinkStatus.length; i++) {
+            for (i = 0; i < clientlinkStatus.length; i++) {
                 if (clientlinkStatus[i].linked == true) {
                     writeData.writeUInt8(1, clientlinkStatus[i].clientId - 1);
                 }
@@ -78,10 +71,7 @@ exports.webParser = function(sock, data) {
  * 與分機板之間的通訊處理
  */
 exports.gameParser = function(clientIdx, data) {
-    var clientId;
-    var cmd;
-    var dataLen;
-    var cmdData;
+    let clientId, cmd, dataLen, cmdData;
 
     clientId = data.readUInt8();
     cmd = data.readUInt8(1);
@@ -100,7 +90,7 @@ exports.gameParser = function(clientIdx, data) {
         case netEventList.EVENT_SPIN:
             eventSpin(clientId, cmdData);
             //回傳水池資訊給分機
-            sendBufData(clientIdx);
+            sendSpinAck(clientIdx);
             break;
         case netEventList.EVENT_MEMBER:
             eventMember(clientId, cmdData);
@@ -130,18 +120,45 @@ function eventAccount(clientId, cmdData) {
  * 處理SPIN事件
  */
 function eventSpin(clientId, cmdData) {
-    var dataIdx = 0;
+    let i, j, value, dataIdx = 0;
+    let bufVal = {yBuf:[], zBuf:[], jpScore:[]};
 
-    //讀取水池資訊
-    for (var i = 0; i < 26; i++) {
-        var value = bufferValue.readDoubleLE(dataIdx) + cmdData.readDoubleLE(dataIdx);
-        bufferValue.writeDoubleLE(dataIdx);
+    //讀取分機Y水池累積數值
+    for (i = 0; i < 5; i++) {
+        for (j = 0; j < 4; j++) {
+            bufVal.yBuf[i*4 + j] = cmdData.readDoubleLE(dataIdx);
+            dataIdx += 8;
+        }
+    }
+    //讀取分機Z水池累積數值
+    for (i = 0; i < 3; i++) {
+        bufVal.zBuf[i] = cmdData.readDoubleLE(dataIdx);
         dataIdx += 8;
     }
-    
-    fs.writeFile("bufferValue.txt", bufferValue);
+    //更新到機率連線水池
+    randBuf.Rand_serverAddYZBuf(bufVal);
 
-    //將水池資訊的部分從接收資料中移除,傳遞給DB的部分來處理
+    //讀取分機畫面上JP累積數值
+    for (i = 0; i < 3; i++) {
+        bufVal.jpScore[i] = cmdData.readDoubleLE(dataIdx);
+        dataIdx += 8;
+    }
+    //更新到機率連線水池
+    randBuf.Rand_serverAddJPScore(bufVal.jpScore);
+
+    //讀取分機累積到連線水池的分數
+    randBuf.clientInfo.addToLinkBuf[clientId - 1] = cmdData.readDoubleLE(dataIdx);
+    dataIdx += 8;
+    //讀取分機總營收
+    randBuf.clientInfo.totalProfit[clientId - 1] = cmdData.readDoubleLE(dataIdx);
+    dataIdx += 8;
+    //讀取分機連線獎項佇列的數值
+    randBuf.clientInfo.linkPrizeCount[clientId - 1] = cmdData.readUInt8(dataIdx);
+    dataIdx += 1;
+    //讀取分機的credit(因為credit的數值還會需要存入DB,所以資料不位移)
+    randBuf.clientInfo.credit[clientId - 1] = cmdData.readUInt8(dataIdx);
+
+    //將水池資訊的部分從接收資料中移除,剩餘資料傳遞給DB的部分來處理
     db.writeSpin(clientId, cmdData.slice(0, dataIdx));
 }
 
@@ -180,8 +197,8 @@ function eventSetup(id, cmdData, clientIdx) {
         //報帳狀態
         writeData.writeUInt8(0, dataIdx++);
         //分機所需的設定頁相關資訊
-        for (var i = 0; i < gameSetup.length; i++) {
-            var value = parseInt(gameSetup[i]);
+        for (let i = 0; i < gameSetup.length; i++) {
+            let value = parseInt(gameSetup[i]);
             if (value > 0xFF) value = 0;
             writeData.writeUInt8(value, dataIdx++);
         }
@@ -206,8 +223,8 @@ function eventReport(cmdData) {
  * 傳送命令給分機, 當id = 255時傳送給所有分機, 否則則為單一台分機的號碼
  */
 function sendCmdToClient(id, cmd, cmdData, len) {
-    var writeData = new Buffer(4 + len);
-    var dataIdx = 0;
+    let writeData = new Buffer(4 + len);
+    let i, dataIdx = 0;
     //sendId
     writeData.writeUInt8(SERVER_ID, dataIdx++);
     //command
@@ -216,12 +233,12 @@ function sendCmdToClient(id, cmd, cmdData, len) {
     writeData.writeUInt16(len, dataIdx);
     dataIdx += 2;
     //update lock status event
-    for (var i = 0; i < len; i++) {
+    for (i = 0; i < len; i++) {
         writeData.writeUInt8(cmdData[i], dataIdx++);
     }
 
     if (id == 255) {
-        for (var i = 0; i < clientlinkStatus.length; i++) {
+        for (i = 0; i < clientlinkStatus.length; i++) {
             if (clientlinkStatus[i].linked == true) {
                 clientlinkStatus[i].sock.write(writeData);
             }
@@ -234,19 +251,32 @@ function sendCmdToClient(id, cmd, cmdData, len) {
 /**
  * 傳送目前水池累積分數,JP檯面分數,分機狀態傳給分機
  */
-function sendBufData(clientIdx) {
-    var wData = new Buffer(1 + 2 + 26*8);
-    var dataIdx = 0;
+function sendSpinAck(clientIdx) {
+    let wData = new Buffer(210);
+    let dataIdx = 0;
+    let i, j;
 
     wData.fill(0, 0, wData.length);
 
     wData.writeUInt8(clientOnLineState, dataIdx++);
-    //copy buffer data to send
-    bufferValue.copy(wData, dataIdx, 0, bufferValue.length);
-    dataIdx += bufferValue.length;
-    
-    wData.writeUInt16LE(linkPrizeSerial, dataIdx);
-    dataIdx += 2;
+    //JP畫面分數
+    for (i = 0; i < 3; i++) {
+        wData.writeDoubleLE(randBuf.jpScore[i], dataIdx);
+        dataIdx += 8;
+    }
+    //連線獎項累積分數
+    for (i = 0; i < 5; i++) {
+        for (j = 0; j < 4; j++) {
+            wData.writeDoubleLE(randBuf.yBuf[i*5+j], dataIdx);
+            dataIdx += 8;
+        }
+    }
+    for (i = 0; i < 3; i++) {
+        wData.writeDoubleLE(randBuf.zBuf[i], dataIdx);
+        dataIdx += 8;
+    }
+    //連線獎項序號,更新本機的連線獎項序號
+    wData.writeUInt8(randBuf.prizeSerial, dataIdx++);
 
     sendCmdToClient(clientIdx, EVENT_SPIN_ACK, wData, dataIdx);
 }

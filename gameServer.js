@@ -1,21 +1,18 @@
+"use strict";
 
-var HOST = '192.168.1.108';
+const HOST = '192.168.1.108';
 /** for game connect port */
-var GAME_PORT = 16888;
+const GAME_PORT = 16888;
 /** for web connect port */
-var WEB_PORT = 16889;
+const WEB_PORT = 16889;
 
-var net = require('net');
-var gameServer = net.createServer(gameClientHandle);
-var webServer = net.createServer(webClientHandle);
+const net = require('net');
+const gameServer = net.createServer(gameClientHandle);
+const webServer = net.createServer(webClientHandle);
 
-var netParser = require('./parser.js');
+const netParser = require('./parser.js');
 var clientlinkStatus = require('./parser.js').clientlinkStatus;
 
-var randBuf = require("./randBuf/randBuf.js");
-
-randBuf.init();
-/*
 gameServer.listen(GAME_PORT,  function() {
     console.log('gameServer listening on ' + gameServer.address().address +':'+ gameServer.address().port);
 });
@@ -23,13 +20,12 @@ gameServer.listen(GAME_PORT,  function() {
 webServer.listen(WEB_PORT,  function() {
     console.log('webServer listening on ' + webServer.address().address +':'+ webServer.address().port);
 });
-*/
 
 /**
  * 新增一個物件到clientlinkStatus的陣列中來進行client狀態的追蹤
  */
 function addNewClient(sock) {
-    var newClient = {};
+    let newClient = {};
 
     newClient.sock = sock;
     newClient.linked = false;
@@ -41,7 +37,7 @@ function addNewClient(sock) {
  * 尋找要處理通訊的client socket index
  */
 function findClitnIdx(sock) {
-    for (var i = 0; i < clientlinkStatus.length; i++) {
+    for (let i = 0; i < clientlinkStatus.length; i++) {
         if (clientlinkStatus[i].sock == sock) {
             return i;
         }
