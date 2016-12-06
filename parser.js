@@ -6,7 +6,12 @@ const MAX_CLIENT_NUM = 100;
 const db = require("./db.js");
 const randBuf = require("./randBuf/randBuf.js");
 
-randBuf.init();
+/** 週期性檢查連線獎項與將水池資訊寫入檔案的時間ms */
+const CHECK_PERIOD = 1000;
+
+/** y連線獎項是否已送出 */
+var prizeSendStatus = {yPrize:0, jpPrize:0};
+
 /** 分機連線狀態的陣列 */
 var clientlinkStatus = [];
 
@@ -30,8 +35,58 @@ var netEventList = {
     /** 更新水池資訊 */
     EVENT_SPIN_ACK: 9,
     /** 派送連線獎項給分機 */
-    EVENT_DISPATCH_LINK_PRIZE: 10,
+    EVENT_DISPATCH_PRIZE: 10,
+    /** 分機回應連線獎項已接收 */
+    EVENT_LINK_PRIZE_ACK: 11,
+    /** 分機告知主機JP的處理 */
+    EVENT_JP_PRIZE_ACK:12,
 };
+
+/** 週期性檢查是否有連線獎項產生 */
+function periodCheckRandBuf() {
+    randBuf.checkBuf();
+
+    //檢查是否有Y連線獎項需要派送
+    if (randBuf.yPrizeRecord.flag == true && prizeSendStatus.yPrize == false) {
+        let wData = new Buffer(17);
+        let dataIdx = 0;
+        wData.writeUInt8(randBuf.yPrizeRecord.flag, dataIdx++);
+        wData.writeUInt8(randBuf.yPrizeRecord.type, dataIdx++);
+        wData.writeUInt8(randBuf.yPrizeRecord.betIdx, dataIdx++);
+        wData.writeUInt8(randBuf.yPrizeRecord.clientIdx, dataIdx++);
+        wData.writeUInt8(randBuf.yPrizeRecord.serial, dataIdx++);
+        wData.writeDoubleLE(randBuf.yPrizeRecord.score, dataIdx);
+        dataIdx += 8;
+        wData.writeUInt32LE(randBuf.yPrizeRecord.timeCount, dataIdx);
+        dataIdx += 4;
+        sendCmdToClient(randBuf.yPrizeRecord.clientIdx, netEventList.EVENT_DISPATCH_PRIZE, wData, dataIdx);
+
+        prizeSendStatus.yPrize = true;
+    }
+
+    //檢查是否有JP連線獎項需要派送
+    if (randBuf.jpPrizeRecord.flag == true && prizeSendStatus.jpPrize == false) {
+        let wData = new Buffer(17);
+        let dataIdx = 0;
+        wData.writeUInt8(randBuf.jpPrizeRecord.flag, dataIdx++);
+        wData.writeUInt8(randBuf.jpPrizeRecord.type, dataIdx++);
+        wData.writeUInt8(randBuf.jpPrizeRecord.betIdx, dataIdx++);
+        wData.writeUInt8(randBuf.jpPrizeRecord.clientIdx, dataIdx++);
+        wData.writeUInt8(randBuf.jpPrizeRecord.serial, dataIdx++);
+        wData.writeDoubleLE(randBuf.jpPrizeRecord.score, dataIdx);
+        dataIdx += 8;
+        wData.writeUInt32LE(randBuf.jpPrizeRecord.timeCount, dataIdx);
+        dataIdx += 4;
+        sendCmdToClient(randBuf.jpPrizeRecord.clientIdx, netEventList.EVENT_DISPATCH_PRIZE, wData, dataIdx);
+
+        prizeSendStatus.jpPrize = true;
+    }
+
+    setTimeout(periodCheckRandBuf, CHECK_PERIOD);
+}
+
+/** 機率水池初始化 */
+randBuf.init(periodCheckRandBuf);
 
 exports.clientlinkStatus = clientlinkStatus;
 
@@ -90,7 +145,7 @@ exports.gameParser = function(clientIdx, data) {
         case netEventList.EVENT_SPIN:
             eventSpin(clientId, cmdData);
             //回傳水池資訊給分機
-            sendSpinAck(clientIdx);
+            sendSpinAck(clientId);
             break;
         case netEventList.EVENT_MEMBER:
             eventMember(clientId, cmdData);
@@ -105,7 +160,27 @@ exports.gameParser = function(clientIdx, data) {
             break;
         case netEventList.EVENT_REPORT:
             eventReport(cmdData);
-            break;  
+            break;
+        case netEventList.EVENT_LINK_PRIZE_ACK:
+            if (randBuf.yPrizeRecord.clientIdx == clientId) {
+                randBuf.Rand_resetYPrize(true);
+                prizeSendStatus.yPrize = false;
+            }
+            break;
+        case netEventList.EVENT_JP_PRIZE_ACK:
+            if (randBuf.jpPrizeRecord.clientIdx == clientId) {
+                let flag = cmdData.readUInt8();
+                let score = cmdData.readDoubleLE(1);
+
+                randBuf.Rand_resetJPPrize(randBuf.jpPrizeRecord.type, flag, score);
+                //分機已經將JP拉走,將JP分數重新設定為起始數值
+                if (flag == true) {
+                    randBuf.Rand_resetJPScore(randBuf.jpPrizeRecord.type);
+                }
+
+                prizeSendStatus.jpPrize = false;
+            }
+            break;
     }
 }
 
@@ -145,6 +220,7 @@ function eventSpin(clientId, cmdData) {
     }
     //更新到機率連線水池
     randBuf.Rand_serverAddJPScore(bufVal.jpScore);
+    console.log(bufVal);
 
     //讀取分機累積到連線水池的分數
     randBuf.clientInfo.addToLinkBuf[clientId - 1] = cmdData.readDoubleLE(dataIdx);
@@ -156,10 +232,10 @@ function eventSpin(clientId, cmdData) {
     randBuf.clientInfo.linkPrizeCount[clientId - 1] = cmdData.readUInt8(dataIdx);
     dataIdx += 1;
     //讀取分機的credit(因為credit的數值還會需要存入DB,所以資料不位移)
-    randBuf.clientInfo.credit[clientId - 1] = cmdData.readUInt8(dataIdx);
+    randBuf.clientInfo.credit[clientId - 1] = cmdData.readUInt32LE(dataIdx);
 
     //將水池資訊的部分從接收資料中移除,剩餘資料傳遞給DB的部分來處理
-    db.writeSpin(clientId, cmdData.slice(0, dataIdx));
+    db.writeSpin(clientId, cmdData.slice(dataIdx, cmdData.length));
 }
 
 /**
@@ -226,12 +302,14 @@ function eventReport(cmdData) {
 function sendCmdToClient(id, cmd, cmdData, len) {
     let writeData = new Buffer(4 + len);
     let i, dataIdx = 0;
+
+    writeData.fill(0);
     //sendId
     writeData.writeUInt8(SERVER_ID, dataIdx++);
     //command
     writeData.writeUInt8(cmd, dataIdx++);
     //command data length
-    writeData.writeUInt16(len, dataIdx);
+    writeData.writeUInt16LE(len, dataIdx);
     dataIdx += 2;
     //update lock status event
     for (i = 0; i < len; i++) {
@@ -244,40 +322,47 @@ function sendCmdToClient(id, cmd, cmdData, len) {
                 clientlinkStatus[i].sock.write(writeData);
             }
         }
-    } else if (clientlinkStatus[id].linked == true) {
-            clientlinkStatus[id].sock.write(writeData);
+    } else {
+        for (i = 0; i < clientlinkStatus.length; i++) {
+            if (clientlinkStatus[i].clientId == id && clientlinkStatus[i].linked == true) {
+                clientlinkStatus[i].sock.write(writeData);
+                break;
+            }
+        }
     }
 }
 
 /**
  * 傳送目前水池累積分數,JP檯面分數,分機狀態傳給分機
  */
-function sendSpinAck(clientIdx) {
+function sendSpinAck(clientId) {
     let wData = new Buffer(210);
     let dataIdx = 0;
     let i, j;
 
-    wData.fill(0, 0, wData.length);
+    randBuf.checkBuf();
+
+    wData.fill(0);
 
     wData.writeUInt8(randBuf.clientOnLineState, dataIdx++);
     //JP畫面分數
     for (i = 0; i < 3; i++) {
-        wData.writeDoubleLE(randBuf.jpScore[i], dataIdx);
+        wData.writeDoubleLE(randBuf.bufValue.jpScore[i], dataIdx);
         dataIdx += 8;
     }
     //連線獎項累積分數
     for (i = 0; i < 5; i++) {
         for (j = 0; j < 4; j++) {
-            wData.writeDoubleLE(randBuf.yBuf[i*5+j], dataIdx);
+            wData.writeDoubleLE(randBuf.bufValue.yBuf[i*4+j], dataIdx);
             dataIdx += 8;
         }
     }
     for (i = 0; i < 3; i++) {
-        wData.writeDoubleLE(randBuf.zBuf[i], dataIdx);
+        wData.writeDoubleLE(randBuf.bufValue.zBuf[i], dataIdx);
         dataIdx += 8;
     }
     //連線獎項序號,更新本機的連線獎項序號
-    wData.writeUInt8(randBuf.prizeSerial, dataIdx++);
+    wData.writeUInt8(randBuf.bufValue.prizeSerial, dataIdx++);
 
-    sendCmdToClient(clientIdx, netEventList.EVENT_SPIN_ACK, wData, dataIdx);
+    sendCmdToClient(clientId, netEventList.EVENT_SPIN_ACK, wData, dataIdx);
 }

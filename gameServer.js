@@ -63,6 +63,7 @@ function gameClientHandle(sock) {
 
         //remove client status from array
         if (clientIdx >= 0) {
+            console.log("remove client:%d", clientIdx);
             clientlinkStatus.splice(clientIdx, 1);
         }
     });
@@ -72,7 +73,7 @@ function gameClientHandle(sock) {
     });
     
     sock.on("end", function(sock) {
-        console.log("client exit");
+        //console.log("client exit");
     });
     
     sock.on('error', function(err) {

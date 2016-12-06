@@ -6,8 +6,6 @@ const fs = require("fs");
 const reserveDataPath = "./randBuf/randBufVal";
 /** 分機最大數量 */
 const MAX_CLIENT_NUM = 100;
-/** 週期性檢查連線獎項與將水池資訊寫入檔案的時間ms */
-const CHECK_PERIOD = 1000;
 
 /** 水池相關資訊的物件 */
 var bufValue = {};
@@ -20,10 +18,12 @@ var fileBuf = new Buffer(469);
 function writeBufValToFile() {
     let i, j;
 
+    fileBuf.fill(0);
+
     for (i = 0; i < 5; i++) {
         for (j = 0; j < 4; j++) {
-            fileBuf.writeDoubleLE(bufValue.yBuf[i*4+j], (i*4 + 2*j)*8);
-            fileBuf.writeDoubleLE(bufValue.yBufThreshold[i*4+j], 8 + (i*4 + 2*j)*8);
+            fileBuf.writeDoubleLE(bufValue.yBuf[i*4+j], (i*2*4 + 2*j)*8);
+            fileBuf.writeDoubleLE(bufValue.yBufThreshold[i*4+j], 8 + (i*2*4 + 2*j)*8);
         }
     }
 
@@ -84,8 +84,8 @@ function readBufValFromFile() {
         bufValue.yBufThreshold = [];
         for (i = 0; i < 5; i++) {
             for (j = 0; j < 4; j++) {
-                bufValue.yBuf[i*4+j] = fileContent.readDoubleLE((i*4 + 2*j) * 8);
-                bufValue.yBufThreshold[i*4+j] = fileContent.readDoubleLE(8 + (i*4 + 2*j) * 8);
+                bufValue.yBuf[i*4+j] = fileContent.readDoubleLE((i*2*4 + 2*j) * 8);
+                bufValue.yBufThreshold[i*4+j] = fileContent.readDoubleLE(8 + (i*2*4 + 2*j) * 8);
             }
         }
 
@@ -112,7 +112,7 @@ function readBufValFromFile() {
 /**
  * 此模組的初始化動作
  */
-function randBufInit() {
+function randBufInit(periodCheckBuf) {
     let i;
 
     readBufValFromFile();
@@ -150,7 +150,7 @@ function randBufInit() {
 /**
  * 週期性檢查是否有連線獎項,並將目前的水資資訊寫入檔案
  */
-function periodCheckBuf() {
+function randcheckBuf() {
     let i, count = 0;
 
     randBuf.Rand_checkLinkPrize(randBuf.clientInfo);
@@ -174,10 +174,10 @@ function periodCheckBuf() {
     } else {
         randBuf.clientOnLineState = 0;
     }
-
-    setTimeout(periodCheckBuf, CHECK_PERIOD);
 }
 
 randBuf.init = randBufInit;
+randBuf.checkBuf = randcheckBuf;
+randBuf.bufValue = bufValue;
 
 module.exports = randBuf;
