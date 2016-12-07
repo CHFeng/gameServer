@@ -4,8 +4,8 @@
 
 var mongoose = require('mongoose');
 /** use mongoose to connect mongoDB */
-mongoose.connect('mongodb://192.168.1.129/GMS');
-//mongoose.connect('mongodb://localhost/GMS');
+//mongoose.connect('mongodb://192.168.1.129/GMS');
+mongoose.connect('mongodb://localhost/GMS');
 
 /** account record data struct */
 var accountSchema = new mongoose.Schema({
@@ -187,18 +187,18 @@ exports.writeSpin = function (clientId, receiveData) {
 /**
  * 將連線獎項資訊寫入DB
  */
-exports.writeLinkPrize = function(receiveData) {
+exports.writeLinkPrize = function(yPrizeRecord) {
     var dataIdx = 0;
     var newLinkPrizeData = new linkPrizeData();
 
-    newLinkPrizeData.flag = receiveData.readUInt8(dataIdx++);
-    newLinkPrizeData.type = receiveData.readUInt8(dataIdx++);
-    newLinkPrizeData.betIdx = receiveData.readUInt8(dataIdx++);
-    newLinkPrizeData.clientIdx = receiveData.readUInt8(dataIdx++);
-    newLinkPrizeData.serial = receiveData.readUInt8(dataIdx++);
-    newLinkPrizeData.score = receiveData.readDoubleLE(dataIdx);
+    newLinkPrizeData.flag = yPrizeRecord.flag;
+    newLinkPrizeData.type = yPrizeRecord.type;
+    newLinkPrizeData.betIdx = yPrizeRecord.betIdx;
+    newLinkPrizeData.clientIdx = yPrizeRecord.clientIdx;
+    newLinkPrizeData.serial = yPrizeRecord.serial;
+    newLinkPrizeData.score = yPrizeRecord.score;
     dataIdx += 8;
-    newLinkPrizeData.timeCount = receiveData.readUInt32LE(dataIdx);
+    newLinkPrizeData.timeCount = yPrizeRecord.timeCount;
     newLinkPrizeData.date = new Date();
 
     //console.log(newLinkPrizeData);

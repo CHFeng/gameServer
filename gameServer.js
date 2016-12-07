@@ -13,6 +13,8 @@ const webServer = net.createServer(webClientHandle);
 const netParser = require('./parser.js');
 var clientlinkStatus = require('./parser.js').clientlinkStatus;
 
+const randBuf = require("./randBuf/randBuf.js");
+
 gameServer.listen(GAME_PORT,  function() {
     console.log('gameServer listening on ' + gameServer.address().address +':'+ gameServer.address().port);
 });
@@ -64,6 +66,8 @@ function gameClientHandle(sock) {
         //remove client status from array
         if (clientIdx >= 0) {
             console.log("remove client:%d", clientIdx);
+            //將機率模組中分機資訊的連線狀態改為false
+            randBuf.clientInfo.linkState[clientlinkStatus[clientIdx].clientId - 1] = false;
             clientlinkStatus.splice(clientIdx, 1);
         }
     });

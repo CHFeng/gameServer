@@ -62,6 +62,8 @@ function periodCheckRandBuf() {
         sendCmdToClient(randBuf.yPrizeRecord.clientIdx, netEventList.EVENT_DISPATCH_PRIZE, wData, dataIdx);
 
         prizeSendStatus.yPrize = true;
+    } else if (randBuf.yPrizeRecord.flag == false) {
+        prizeSendStatus.yPrize = false;
     }
 
     //檢查是否有JP連線獎項需要派送
@@ -80,6 +82,8 @@ function periodCheckRandBuf() {
         sendCmdToClient(randBuf.jpPrizeRecord.clientIdx, netEventList.EVENT_DISPATCH_PRIZE, wData, dataIdx);
 
         prizeSendStatus.jpPrize = true;
+    } else if (randBuf.jpPrizeRecord.flag == false) {
+        prizeSendStatus.jpPrize = false;
     }
 
     setTimeout(periodCheckRandBuf, CHECK_PERIOD);
@@ -136,6 +140,7 @@ exports.gameParser = function(clientIdx, data) {
     //測試用
     clientlinkStatus[clientIdx].clientId = clientId;
     clientlinkStatus[clientIdx].linked = true;
+    randBuf.clientInfo.linkState[clientId - 1] = true;
 
     //console.log("Command is %d from Remote port:%d", cmd, sock.remotePort);
     switch (cmd) {
@@ -163,19 +168,27 @@ exports.gameParser = function(clientIdx, data) {
             break;
         case netEventList.EVENT_LINK_PRIZE_ACK:
             if (randBuf.yPrizeRecord.clientIdx == clientId) {
+                //將已送達分機的Y連線獎項寫入資料庫
+                db.writeLinkPrize(randBuf.yPrizeRecord);
                 randBuf.Rand_resetYPrize(true);
                 prizeSendStatus.yPrize = false;
+            } else if (randBuf.jpPrizeRecord.clientIdx == clientId) {
+                //告知機率模組JP獎項已送達,但還沒被玩家獲得
+                randBuf.Rand_updateJpPrize(2);
             }
             break;
         case netEventList.EVENT_JP_PRIZE_ACK:
             if (randBuf.jpPrizeRecord.clientIdx == clientId) {
                 let flag = cmdData.readUInt8();
-                let score = cmdData.readDoubleLE(1);
+                let type = cmdData.readUInt8(1);
+                let score = cmdData.readDoubleLE(2);
 
-                randBuf.Rand_resetJPPrize(randBuf.jpPrizeRecord.type, flag, score);
+                randBuf.Rand_resetJPPrize(type, flag, score);
                 //分機已經將JP拉走,將JP分數重新設定為起始數值
                 if (flag == true) {
-                    randBuf.Rand_resetJPScore(randBuf.jpPrizeRecord.type);
+                    //將分機已經開出的JP連線獎項寫入資料庫
+                    db.writeLinkPrize(randBuf.jpPrizeRecord);
+                    randBuf.Rand_resetJPScore(type);
                 }
 
                 prizeSendStatus.jpPrize = false;
@@ -205,11 +218,13 @@ function eventSpin(clientId, cmdData) {
             dataIdx += 8;
         }
     }
+
     //讀取分機Z水池累積數值
     for (i = 0; i < 3; i++) {
         bufVal.zBuf[i] = cmdData.readDoubleLE(dataIdx);
         dataIdx += 8;
     }
+
     //更新到機率連線水池
     randBuf.Rand_serverAddYZBuf(bufVal);
 
@@ -218,9 +233,10 @@ function eventSpin(clientId, cmdData) {
         bufVal.jpScore[i] = cmdData.readDoubleLE(dataIdx);
         dataIdx += 8;
     }
+
     //更新到機率連線水池
     randBuf.Rand_serverAddJPScore(bufVal.jpScore);
-    console.log(bufVal);
+    //console.log(bufVal);
 
     //讀取分機累積到連線水池的分數
     randBuf.clientInfo.addToLinkBuf[clientId - 1] = cmdData.readDoubleLE(dataIdx);

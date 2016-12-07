@@ -39,7 +39,11 @@ function writeBufValToFile() {
     fileBuf.writeUInt32LE(bufValue.MaxBet, 464);
     fileBuf.writeUInt8(bufValue.prizeSerial, 468);
 
-    fs.writeFileSync(reserveDataPath, fileBuf);
+    fs.writeFile(reserveDataPath, fileBuf, function(err, written, buffer) {
+        if (err) console.log(err);
+    });
+
+    //fs.writeFileSync(reserveDataPath, fileBuf);
 }
 
 /**
@@ -153,8 +157,13 @@ function randBufInit(periodCheckBuf) {
 function randcheckBuf() {
     let i, count = 0;
 
+    //檢查連線獎項
     randBuf.Rand_checkLinkPrize(randBuf.clientInfo);
+    //更新水池資訊
     randBuf.Rand_updateBufValue(bufValue);
+    //檢查連線獎項是否timeout
+    randBuf.Rand_checkLinkPrizeTimeout(400);
+    //更新連線獎項的狀態
     randBuf.yPrizeRecord = randBuf.Rand_updateYPrize();
     randBuf.jpPrizeRecord = randBuf.Rand_updateJpPrize();
 
