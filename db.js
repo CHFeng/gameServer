@@ -24,7 +24,7 @@ var accountData = mongoose.model('AccountDatas', accountSchema);
 var MachineSettingSchema = new mongoose.Schema({
     /** 子機編號 */
     MachineCode: {
-        type: String,
+        type: Number,
         index: {
             unique: true
         }
@@ -32,7 +32,7 @@ var MachineSettingSchema = new mongoose.Schema({
     /** 遊戲ID */
     GameVersionID: String,
     /** 設定值物件 */
-    SettingArgs: [],
+    SettingArgs: {},
     /** 設定值陣列 */
     PureSettings: []
 }, {
@@ -127,16 +127,17 @@ exports.writeAccount = function (clientId, receiveData) {
  * 根據clientId & gameVerId從DB讀取設定頁資訊
  */
 exports.readGameSetup = function (clientId, gameVerId, callback) {
-    MachineSettings.find({ MachineCode: String(clientId)/*, GameVersionID: gameVerId*/ }, function (err, gameSettingValue) {
+    MachineSettings.find({ MachineCode: String(clientId), GameVersionID: gameVerId}, function (err, gameSettingValue) {
         if (err) return console.error(err);
         if (gameSettingValue.length == 1) {
-            gameSettingValue[0].SettingArgs.forEach(function (value, index, ar) {
-                console.log(ar[index].name + ":" + ar[index].value);
-            })
-
+            /*
+            for (var index in gameSettingValue[0].SettingArgs) {
+                console.log(index + ":" + gameSettingValue[0].SettingArgs[index])
+            }
+            */
             callback(gameSettingValue[0].PureSettings, gameSettingValue[0].GameVersionID);
         } else {
-            console.log("result:%d", gameSettingValue.length);
+            console.log("can't find result with clientId:%d gameVerId:%s", clientId, gameVerId);
         }
     });
 }
