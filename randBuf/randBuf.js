@@ -39,11 +39,12 @@ function writeBufValToFile() {
     fileBuf.writeUInt32LE(bufValue.MaxBet, 464);
     fileBuf.writeUInt8(bufValue.prizeSerial, 468);
 
+    /*
     fs.writeFile(reserveDataPath, fileBuf, function(err, written, buffer) {
         if (err) console.log(err);
     });
-
-    //fs.writeFileSync(reserveDataPath, fileBuf);
+    */
+    fs.writeFileSync(reserveDataPath, fileBuf);
 }
 
 /**
