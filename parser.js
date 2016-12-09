@@ -40,6 +40,8 @@ var netEventList = {
     EVENT_LINK_PRIZE_ACK: 11,
     /** 分機告知主機JP的處理 */
     EVENT_JP_PRIZE_ACK:12,
+    /** HEARTBEAT */
+    EVENT_HEARTBEAT:13
 };
 
 /** 週期性檢查是否有連線獎項產生 */
@@ -194,6 +196,9 @@ exports.gameParser = function(clientIdx, data) {
                 prizeSendStatus.jpPrize = false;
             }
             break;
+        case netEventList.EVENT_HEARTBEAT:
+            sendCmdToClient(clientId, netEventList.EVENT_HEARTBEAT, 0, 0);
+            break;
     }
 }
 
@@ -269,9 +274,11 @@ function eventSetup(id, cmdData, clientIdx) {
     randBuf.clientInfo.linkState[id - 1] = true;
 
     db.readGameSetup(id, cmdData, function(gameSetup, gameVersionId) {
-        var writeData = new Buffer(gameSetup.length + 4 + 16);
-        var dataIdx = 0;
-        gameVersionId = "BA01D_TC01";
+        let writeData = new Buffer(gameSetup.length + 4 + 22);
+        let dataIdx = 0;
+        let curTime = new Date();
+
+        //gameVersionId = "BA01D_TC01";
         //sendId
         writeData.writeUInt8(SERVER_ID, dataIdx++);
         //command
@@ -289,6 +296,14 @@ function eventSetup(id, cmdData, clientIdx) {
         dataIdx += 4;
         //報帳狀態
         writeData.writeUInt8(0, dataIdx++);
+        //主機時間
+        writeData.writeUInt8(curTime.getFullYear() - 2000, dataIdx++);
+        writeData.writeUInt8(curTime.getMonth() + 1, dataIdx++);
+        writeData.writeUInt8(curTime.getDate(), dataIdx++);
+        writeData.writeUInt8(curTime.getHours(), dataIdx++);
+        writeData.writeUInt8(curTime.getMinutes(), dataIdx++);
+        writeData.writeUInt8(curTime.getSeconds(), dataIdx++);
+
         //分機所需的設定頁相關資訊
         for (let i = 0; i < gameSetup.length; i++) {
             let value = parseInt(gameSetup[i]);
