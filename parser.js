@@ -102,6 +102,8 @@ exports.clientlinkStatus = clientlinkStatus;
 exports.webParser = function(sock, data) {
     let i, cmd, dataLen, cmdData;
 
+    if (data.length < 3) return;
+
     cmd = data.readUInt8(0);
     dataLen = data.readUInt16LE(1);
     if (dataLen > 0) {
@@ -120,10 +122,14 @@ exports.webParser = function(sock, data) {
             sock.write(writeData);
             break;
         case 2: //更新分機鎖機時間
-            sendCmdToClient(255, netEventList.EVENT_LOCK_TIME, cmdData, 6);
+            if (cmdData.length == 6) {
+                sendCmdToClient(255, netEventList.EVENT_LOCK_TIME, cmdData, 6);
+            }
             break;
         case 3: //執行分機鎖機功能
-            sendCmdToClient(255, netEventList.EVENT_LOCK_STATUS, cmdData, 1);
+            if (cmdData.length == 1) {
+                sendCmdToClient(255, netEventList.EVENT_LOCK_STATUS, cmdData, 1);
+            }
             break;
     }
 }
