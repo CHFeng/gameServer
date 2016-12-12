@@ -61,7 +61,7 @@ var spinData = mongoose.model('SpinData', SpinDataSchema);
 /** link prize data struct */
 var linkPrizeDataSchema = new mongoose.Schema({
 	/** 獎項類別 */
-	type: Number,
+	type: String,
 	/** 押注區間 */
 	betIdx: Number,
 	/** 哪一台中獎 */
@@ -187,7 +187,12 @@ exports.writeSpin = function (clientId, receiveData) {
 exports.writeLinkPrize = function(yPrizeRecord) {
     var newLinkPrizeData = new linkPrizeData();
 
-    newLinkPrizeData.type = yPrizeRecord.type;
+    if (yPrizeRecord.type < 3) {
+        newLinkPrizeData.type = "JackPot" + (yPrizeRecord.type + 1);
+    } else {
+        newLinkPrizeData.type = "YBuffer" + (yPrizeRecord.type - 2);
+    }
+
     newLinkPrizeData.betIdx = yPrizeRecord.betIdx;
     newLinkPrizeData.clientIdx = yPrizeRecord.clientIdx;
     newLinkPrizeData.serial = yPrizeRecord.serial;
