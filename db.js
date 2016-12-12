@@ -60,8 +60,6 @@ var spinData = mongoose.model('SpinData', SpinDataSchema);
 
 /** link prize data struct */
 var linkPrizeDataSchema = new mongoose.Schema({
-    /** 是否有大獎 */
-	flag: Boolean,
 	/** 獎項類別 */
 	type: Number,
 	/** 押注區間 */
@@ -72,8 +70,6 @@ var linkPrizeDataSchema = new mongoose.Schema({
 	serial: Number,
 	/** 獎項分數 */
 	score: Number,
-	/** 確認時間 */
-	timeCount: Number,
     /** 產生此獎項的日期與時間 */
     date: Date,
 }, {
@@ -189,17 +185,13 @@ exports.writeSpin = function (clientId, receiveData) {
  * 將連線獎項資訊寫入DB
  */
 exports.writeLinkPrize = function(yPrizeRecord) {
-    var dataIdx = 0;
     var newLinkPrizeData = new linkPrizeData();
 
-    newLinkPrizeData.flag = yPrizeRecord.flag;
     newLinkPrizeData.type = yPrizeRecord.type;
     newLinkPrizeData.betIdx = yPrizeRecord.betIdx;
     newLinkPrizeData.clientIdx = yPrizeRecord.clientIdx;
     newLinkPrizeData.serial = yPrizeRecord.serial;
     newLinkPrizeData.score = yPrizeRecord.score;
-    dataIdx += 8;
-    newLinkPrizeData.timeCount = yPrizeRecord.timeCount;
     newLinkPrizeData.date = new Date();
 
     //console.log(newLinkPrizeData);
