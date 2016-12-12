@@ -134,31 +134,37 @@ exports.webParser = function(sock, data) {
 exports.gameParser = function(clientIdx, data) {
     let clientId, cmd, dataLen, cmdData;
 
+    if (data.length < 4) return;
+    
     clientId = data.readUInt8();
     cmd = data.readUInt8(1);
     dataLen = data.readUInt16LE(2);
     cmdData = data.slice(4);
     
     //測試用
-    clientlinkStatus[clientIdx].clientId = clientId;
-    clientlinkStatus[clientIdx].linked = true;
-    randBuf.clientInfo.linkState[clientId - 1] = true;
+    //clientlinkStatus[clientIdx].clientId = clientId;
+    //clientlinkStatus[clientIdx].linked = true;
+    //randBuf.clientInfo.linkState[clientId - 1] = true;
 
     //console.log("Command is %d from Remote port:%d", cmd, sock.remotePort);
     switch (cmd) {
         case netEventList.EVENT_ACCOUNT:
-            eventAccount(clientId, cmdData);
+            if (cmdData.length == 19) {
+                eventAccount(clientId, cmdData);
+            }
             break;
         case netEventList.EVENT_SPIN:
-            eventSpin(clientId, cmdData);
-            //回傳水池資訊給分機
-            sendSpinAck(clientId);
+            if (cmdData.length >= 260) {
+                eventSpin(clientId, cmdData);
+                //回傳水池資訊給分機
+                sendSpinAck(clientId);
+            }
             break;
         case netEventList.EVENT_MEMBER:
             eventMember(clientId, cmdData);
             break;
         case netEventList.EVENT_SETUP:
-            if (clientIdx >= 0) {
+            if (cmdData.length == 10) {
                 eventSetup(clientId, cmdData, clientIdx);
             }
             break;
@@ -180,7 +186,7 @@ exports.gameParser = function(clientIdx, data) {
             }
             break;
         case netEventList.EVENT_JP_PRIZE_ACK:
-            if (randBuf.jpPrizeRecord.clientIdx == clientId) {
+            if (randBuf.jpPrizeRecord.clientIdx == clientId && cmdData.length == 10) {
                 let flag = cmdData.readUInt8();
                 let type = cmdData.readUInt8(1);
                 let score = cmdData.readDoubleLE(2);
@@ -273,6 +279,10 @@ function eventSetup(id, cmdData, clientIdx) {
     clientlinkStatus[clientIdx].clientId = id;
     randBuf.clientInfo.linkState[id - 1] = true;
 
+    if (cmdData.length > 10) {
+        cmdData = cmdData.slice(0, 10);
+    }
+
     db.readGameSetup(id, cmdData, function(gameSetup, gameVersionId) {
         let writeData = new Buffer(gameSetup.length + 4 + 22);
         let dataIdx = 0;
@@ -284,7 +294,7 @@ function eventSetup(id, cmdData, clientIdx) {
         //command
         writeData.writeUInt8(netEventList.EVENT_SETUP, dataIdx++);
         //command data length
-        writeData.writeUInt16(62, dataIdx);
+        writeData.writeUInt16LE(gameSetup.length + 22, dataIdx);
         dataIdx += 2;
         //通訊版本
         writeData.writeUInt8(NET_PROTOCOL_VER, dataIdx++);
@@ -312,6 +322,7 @@ function eventSetup(id, cmdData, clientIdx) {
         }
 
         clientlinkStatus[clientIdx].sock.write(writeData);
+        console.log("send setup");
     })
 }
 
