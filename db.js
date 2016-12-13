@@ -4,8 +4,8 @@
 
 var mongoose = require('mongoose');
 /** use mongoose to connect mongoDB */
-//mongoose.connect('mongodb://192.168.1.129/GMS');
-mongoose.connect('mongodb://localhost/GMS');
+mongoose.connect('mongodb://192.168.1.129/GMS');
+//mongoose.connect('mongodb://localhost/GMS');
 
 /** account record data struct */
 var accountSchema = new mongoose.Schema({

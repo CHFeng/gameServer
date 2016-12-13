@@ -70,6 +70,7 @@ function gameClientHandle(sock) {
             randBuf.clientInfo.linkState[clientlinkStatus[clientIdx].clientId - 1] = false;
             clientlinkStatus.splice(clientIdx, 1);
         }
+        sock.end();
     });
     
     sock.on('data', function(data) {
@@ -81,7 +82,6 @@ function gameClientHandle(sock) {
     });
     
     sock.on('error', function(err) {
-        console.log("ERROR:");
         console.log(err);
     });
 }
