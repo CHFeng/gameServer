@@ -7,6 +7,8 @@ const db = require("./db.js");
 const randBuf = require("./randBuf/randBuf.js");
 const fs = require("fs");
 
+/** 水池相關資訊保留檔案的路徑 */
+const reserveDataPath = "./randBuf/randBufVal";
 /** 週期性檢查連線獎項與將水池資訊寫入檔案的時間ms */
 const CHECK_PERIOD = 1000;
 /** 與分機通訊的資料Header長度 */
@@ -56,7 +58,9 @@ const webEventList = {
     /** 更新機率水池資訊 */
     EVENT_UPDATE_BUF_SETTING:5,
     /** 更新群組檢核碼 */
-    EVENT_UPDATE_ROOTPWD:6
+    EVENT_UPDATE_ROOTPWD:6,
+    /** 查詢機率水池資訊 */
+    EVENT_CHECK_BUF_VALUE:7
 };
 
 /** 連線獎項是否已送出 */
@@ -185,6 +189,11 @@ exports.webParser = function(sock, data) {
                 rootPwd = cmdData.readUInt32LE();
                 fs.writeFileSync("./rootPwd", cmdData);
             }
+            break;
+        case webEventList.EVENT_CHECK_BUF_VALUE: //檢查機率水池資訊
+            let fileContent;
+            fileContent = fs.readFileSync(reserveDataPath);
+            sock.write(fileContent);
             break;
     }
 }

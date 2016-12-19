@@ -9,14 +9,14 @@ const MAX_CLIENT_NUM = 100;
 
 /** 水池相關資訊的物件 */
 var bufValue = {};
-/** 用來寫入檔案的buffer物件 */
-var fileBuf = new Buffer(469);
 
 /**
  * 將水池相關資訊寫入檔案中保留
  */
 function writeBufValToFile() {
     let i, j;
+    /** 用來寫入檔案的buffer物件 */
+    let fileBuf = new Buffer(469);
 
     fileBuf.fill(0);
 
