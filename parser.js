@@ -176,14 +176,16 @@ exports.webParser = function(sock, data) {
             break;
         case webEventList.EVENT_UPDATE_LOCK_TIME: //更新分機鎖機時間
             if (cmdData.length == 6) {
-                payLock = TRUE;
-                fs.writeFileSync("./payLock", payLock);
-                sendCmdToClient(255, webEventList.EVENT_UPDATE_LOCK_TIME, cmdData, 6);
+                let fileContent = new Buffer(1);
+                payLock = 1;
+                fileContent.writeInt8(payLock);
+                fs.writeFileSync("./payLock", fileContent);
+                sendCmdToClient(255, gameEventList.EVENT_LOCK_TIME, cmdData, 6);
             }
             break;
         case webEventList.EVENT_UPDATE_LOCK_STATUS: //執行分機鎖機功能
             if (cmdData.length == 1) {
-                sendCmdToClient(255, webEventList.EVENT_UPDATE_LOCK_STATUS, cmdData, 1);
+                sendCmdToClient(255, gameEventList.EVENT_LOCK_STATUS, cmdData, 1);
             }
             break;
         case webEventList.EVENT_UPDATE_SETUP: //執行分機更新設定頁
@@ -422,7 +424,7 @@ function eventSetup(id, cmdData, clientIdx) {
         writeData.writeUInt32LE(rootPwd, dataIdx);
         dataIdx += 4;
         //報帳狀態
-        writeData.writeUInt8(0, dataIdx++);
+        writeData.writeUInt8(payLock, dataIdx++);
         //主機時間
         writeData.writeUInt8(curTime.getFullYear() - 2000, dataIdx++);
         writeData.writeUInt8(curTime.getMonth() + 1, dataIdx++);
