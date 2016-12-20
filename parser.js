@@ -71,7 +71,11 @@ var clientlinkStatus = [];
 
 /** 群組檢核碼 */
 var rootPwd = 1234;
+/** 系統報帳狀態 */
+var payLock = 0;
+/** 讀取系統的群組檢核碼與報帳狀態 */
 (function() {
+    //讀取檢核碼
     if (fs.existsSync("./rootPwd") == false) {
         let fileBuf = new Buffer(4);
         fileBuf.writeUInt32LE(rootPwd);
@@ -80,6 +84,16 @@ var rootPwd = 1234;
         let fileContent;
         fileContent = fs.readFileSync("./rootPwd");
         rootPwd = fileContent.readUInt32LE();
+    }
+    //讀取報帳狀態
+    if (fs.existsSync("./payLock") == false) {
+        let fileBuf = new Buffer(1);
+        fileBuf.writeUInt8(payLock);
+        fs.writeFileSync("./payLock", fileBuf);
+    } else {
+        let fileContent;
+        fileContent = fs.readFileSync("./payLock");
+        payLock = fileContent.readUInt8();
     }
 })();
 
@@ -162,6 +176,8 @@ exports.webParser = function(sock, data) {
             break;
         case webEventList.EVENT_UPDATE_LOCK_TIME: //更新分機鎖機時間
             if (cmdData.length == 6) {
+                payLock = TRUE;
+                fs.writeFileSync("./payLock", payLock);
                 sendCmdToClient(255, gameEventList.EVENT_LOCK_TIME, cmdData, 6);
             }
             break;
