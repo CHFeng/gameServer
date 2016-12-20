@@ -178,12 +178,12 @@ exports.webParser = function(sock, data) {
             if (cmdData.length == 6) {
                 payLock = TRUE;
                 fs.writeFileSync("./payLock", payLock);
-                sendCmdToClient(255, gameEventList.EVENT_LOCK_TIME, cmdData, 6);
+                sendCmdToClient(255, webEventList.EVENT_UPDATE_LOCK_TIME, cmdData, 6);
             }
             break;
         case webEventList.EVENT_UPDATE_LOCK_STATUS: //執行分機鎖機功能
             if (cmdData.length == 1) {
-                sendCmdToClient(255, gameEventList.EVENT_LOCK_STATUS, cmdData, 1);
+                sendCmdToClient(255, webEventList.EVENT_UPDATE_LOCK_STATUS, cmdData, 1);
             }
             break;
         case webEventList.EVENT_UPDATE_SETUP: //執行分機更新設定頁
