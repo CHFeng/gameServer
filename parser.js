@@ -46,25 +46,25 @@ const gameEventList = {
     /** 分機向主機索取票券的金額 */
     EVENT_BCD_2_CASH: 14,
     /** HEARTBEAT */
-    EVENT_HEARTBEAT:15
+    EVENT_HEARTBEAT: 15
 };
 
 /** 與Web通訊的命令事件列表 */
 const webEventList = {
     /** 查詢分機連線狀態 */
-    EVENT_CHECK_LINK:1,
+    EVENT_CHECK_LINK: 1,
     /** 更新分機鎖機時間 */
-    EVENT_UPDATE_LOCK_TIME:2,
+    EVENT_UPDATE_LOCK_TIME: 2,
     /** 改變分機鎖機狀態 */
-    EVENT_UPDATE_LOCK_STATUS:3,
+    EVENT_UPDATE_LOCK_STATUS: 3,
     /** 更新分機設定頁資訊 */
-    EVENT_UPDATE_SETUP:4,
+    EVENT_UPDATE_SETUP: 4,
     /** 更新機率水池資訊 */
-    EVENT_UPDATE_BUF_SETTING:5,
+    EVENT_UPDATE_BUF_SETTING: 5,
     /** 更新群組檢核碼 */
-    EVENT_UPDATE_ROOTPWD:6,
+    EVENT_UPDATE_ROOTPWD: 6,
     /** 查詢機率水池資訊 */
-    EVENT_CHECK_BUF_VALUE:7,
+    EVENT_CHECK_BUF_VALUE: 7,
     /** 取得現金票券的BCD碼 */
     EVENT_GET_BCD_VALUE: 8,
     /** 取得票券BCD碼所代表的金額 */
@@ -72,7 +72,10 @@ const webEventList = {
 };
 
 /** 連線獎項是否已送出 */
-var prizeSendStatus = {yPrize:0, jpPrize:0};
+var prizeSendStatus = {
+    yPrize: 0,
+    jpPrize: 0
+};
 
 /** 分機連線狀態的陣列 */
 var clientlinkStatus = [];
@@ -85,7 +88,7 @@ var rootPwd = 1234;
 /** 系統報帳狀態 */
 var payLock = 0;
 /** 讀取系統的群組檢核碼與報帳狀態 */
-(function() {
+(function () {
     //讀取檢核碼
     if (fs.existsSync("./rootPwd") == false) {
         let fileBuf = new Buffer(4);
@@ -160,10 +163,10 @@ randBuf.init(periodCheckRandBuf);
 
 exports.clientlinkStatus = clientlinkStatus;
 
-/** 
-* 與web Interface的相關資料傳遞
-*/
-exports.webParser = function(sock, data) {
+/**
+ * 與web Interface的相關資料傳遞
+ */
+exports.webParser = function (sock, data) {
     let i, cmd, dataLen, cmdData;
 
     webSocket = sock;
@@ -249,7 +252,7 @@ exports.webParser = function(sock, data) {
 /**
  * 根據WEB界面傳來的資料設定水池參數(最大押注,jpMax,jpBase)
  */
-function webUpdateBufSetting(cmdData){
+function webUpdateBufSetting(cmdData) {
     let i;
     //判斷最大押注是否改變
     if (randBuf.bufValue.MaxBet != cmdData.readUInt32LE()) {
@@ -269,7 +272,7 @@ function webUpdateBufSetting(cmdData){
         if (randBuf.bufValue.jpMax[i] != cmdData.readDoubleLE(4 + i * 8)) {
             randBuf.bufValue.jpMax[i] = cmdData.readDoubleLE(4 + i * 8);
             randBuf.Rand_setJPMaxScore(i, randBuf.bufValue.jpMax[i]);
-            console.log("change JP%d MaxScore:%f", i+1, randBuf.bufValue.jpMax[i]);
+            console.log("change JP%d MaxScore:%f", i + 1, randBuf.bufValue.jpMax[i]);
         }
     }
 
@@ -278,7 +281,7 @@ function webUpdateBufSetting(cmdData){
         if (randBuf.bufValue.jpBase[i] != cmdData.readDoubleLE(28 + i * 8)) {
             randBuf.bufValue.jpBase[i] = cmdData.readDoubleLE(28 + i * 8);
             randBuf.Rand_setJPBaseScore(i, randBuf.bufValue.jpBase[i]);
-            console.log("change JP%d BaseScore:%f", i+1, randBuf.bufValue.jpBase[i]);
+            console.log("change JP%d BaseScore:%f", i + 1, randBuf.bufValue.jpBase[i]);
         }
     }
     //將數值寫入檔案
@@ -288,16 +291,16 @@ function webUpdateBufSetting(cmdData){
 /**
  * 與分機板之間的通訊處理
  */
-exports.gameParser = function(clientIdx, data) {
+exports.gameParser = function (clientIdx, data) {
     let clientId, cmd, dataLen, cmdData;
 
     if (data.length < GAME_HEADER_LEN) return;
-    
+
     clientId = data.readUInt8();
     cmd = data.readUInt8(1);
     dataLen = data.readUInt16LE(2);
     cmdData = data.slice(GAME_HEADER_LEN);
-    
+
     switch (cmd) {
         case gameEventList.EVENT_ACCOUNT:
             if (cmdData.length == 19) {
@@ -374,12 +377,16 @@ function eventAccount(clientId, cmdData) {
  */
 function eventSpin(clientId, cmdData) {
     let i, j, value, dataIdx = 0;
-    let bufVal = {yBuf:[], zBuf:[], jpScore:[]};
+    let bufVal = {
+        yBuf: [],
+        zBuf: [],
+        jpScore: []
+    };
 
     //讀取分機Y水池累積數值
     for (i = 0; i < 5; i++) {
         for (j = 0; j < 4; j++) {
-            bufVal.yBuf[i*4 + j] = cmdData.readDoubleLE(dataIdx);
+            bufVal.yBuf[i * 4 + j] = cmdData.readDoubleLE(dataIdx);
             dataIdx += 8;
         }
     }
@@ -424,8 +431,7 @@ function eventSpin(clientId, cmdData) {
 /**
  * 處理會員事件, read db then write to sock
  */
-function eventMember(clientId, cmdData) {
-}
+function eventMember(clientId, cmdData) {}
 
 /**
  * 處理遊戲設定事件, read db then write to sock
@@ -438,7 +444,7 @@ function eventSetup(id, cmdData, clientIdx) {
         cmdData = cmdData.slice(0, 10);
     }
 
-    db.readGameSetup(id, cmdData, function(gameSetup, gameVersionId) {
+    db.readGameSetup(id, cmdData, function (gameSetup, gameVersionId) {
         let writeData = new Buffer(GAME_HEADER_LEN + 26 + gameSetup.length);
         let dataIdx = 0;
         let curTime = new Date();
@@ -449,7 +455,7 @@ function eventSetup(id, cmdData, clientIdx) {
         //command
         writeData.writeUInt8(gameEventList.EVENT_SETUP, dataIdx++);
         //command data length
-        writeData.writeUInt16LE(26 +　gameSetup.length, dataIdx);
+        writeData.writeUInt16LE(26 + 　gameSetup.length, dataIdx);
         dataIdx += 2;
         //通訊版本
         writeData.writeUInt8(NET_PROTOCOL_VER, dataIdx++);
@@ -581,7 +587,7 @@ function sendSpinAck(clientId) {
     //連線獎項累積分數
     for (i = 0; i < 5; i++) {
         for (j = 0; j < 4; j++) {
-            wData.writeDoubleLE(randBuf.bufValue.yBuf[i*4+j], dataIdx);
+            wData.writeDoubleLE(randBuf.bufValue.yBuf[i * 4 + j], dataIdx);
             dataIdx += 8;
         }
     }
@@ -599,26 +605,28 @@ function sendSpinAck(clientId) {
  * 處理現金轉換成票券的事件
  */
 function eventCash2BCDAck(clientId, cmdData) {
-    let wData = new Buffer(11);
+    var cashvalue = cmdData.readDoubleLE();
+    db.generateTicketBCD(clientId, cashvalue, function (err, bcdcode) {
+        if (err) {
+            console.log('generate BCDCode fail');
+        } else {
+            sendCmdToClient(clientId, gameEventList.EVENT_CASH_2_BCD, bcdcode, bcdcode.length);
+        }
+    });
 
-    wData.writeUInt8(webEventList.EVENT_GET_BCD_VALUE, 0);
-    wData.writeUInt16LE(8, 1);
-    wData.writeUInt8(clientId, 3);
-    cmdData.copy(wData, 4, 0, cmdData.length);
-
-    webSocket.write(wData);
 }
 
 /**
  * 處理票券轉換成現金的事件
  */
 function eventBCD2CashAck(clientId, cmdData) {
-    let wData = new Buffer(21);
+    var bcdcode = cmdData.readUInt8();
+    db.getTicketCashValue(clientId, bcdcode, function (err, cashValue) {
+        if (err) {
+            console.log('get ticket cash value fail');
+        } else {
+            sendCmdToClient(clientId, gameEventList.EVENT_BCD_2_CASH, cashValue, cashValue.length);
+        }
+    });
 
-    wData.writeUInt8(webEventList.EVENT_CHECK_BCD_VALUE, 0);
-    wData.writeUInt16LE(18, 1);
-    wData.writeUInt8(clientId, 3);
-    cmdData.copy(wData, 4, 0, cmdData.length);
-
-    webSocket.write(wData);
 }
