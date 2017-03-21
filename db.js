@@ -264,7 +264,7 @@ exports.generateTicketBCD = function (clientId, cashvalue, callback) {
         TicketNO: traceNO,
         TicketState: 1,
         TicketAmount: 1,
-        TicketValue: exchangeData.TicketValue,
+        TicketValue: cashvalue,
         TraceNO: 'Client_' + clientId,
         ExchangeTime: new Date(),
         Creator: '分機:' + clientId,

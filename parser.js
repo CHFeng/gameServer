@@ -293,7 +293,7 @@ function webUpdateBufSetting(cmdData) {
  * 與分機板之間的通訊處理
  */
 exports.gameParser = function (clientIdx, data) {
-    let clientId, cmd, dataLen, cmdData, checksum;
+    let clientId, cmd, dataLen, cmdData, checksum, calChecksum;
 
     if (data.length < GAME_HEADER_LEN) return;
 
@@ -302,10 +302,12 @@ exports.gameParser = function (clientIdx, data) {
     dataLen = data.readUInt16LE(2);
     checksum = data.readUInt32LE(4);
     cmdData = data.slice(GAME_HEADER_LEN);
+    calChecksum = crc32.buf(cmdData) >>> 0;
 
     //判斷資料的checksum是否正確
-    if (crc32.buf(cmdData) != checksum) {
-        console.log("checksumError %d %d", crc32.buf(cmdData), checksum)
+    if (calChecksum != checksum) {
+        console.log("checksumError %d %d", calChecksum, checksum);
+        return;
     }
 
     switch (cmd) {
@@ -452,18 +454,10 @@ function eventSetup(id, cmdData, clientIdx) {
     }
 
     db.readGameSetup(id, cmdData, function (gameSetup, gameVersionId) {
-        let writeData = new Buffer(GAME_HEADER_LEN + 26 + gameSetup.length);
+        let writeData = new Buffer(26 + gameSetup.length);
         let dataIdx = 0;
         let curTime = new Date();
 
-        //gameVersionId = "BA01D_TC01";
-        //sendId
-        writeData.writeUInt8(SERVER_ID, dataIdx++);
-        //command
-        writeData.writeUInt8(gameEventList.EVENT_SETUP, dataIdx++);
-        //command data length
-        writeData.writeUInt16LE(26 + 　gameSetup.length, dataIdx);
-        dataIdx += 2;
         //通訊版本
         writeData.writeUInt8(NET_PROTOCOL_VER, dataIdx++);
         //遊戲版本
@@ -490,8 +484,7 @@ function eventSetup(id, cmdData, clientIdx) {
             if (value > 0xFF) value = 0;
             writeData.writeUInt8(value, dataIdx++);
         }
-
-        clientlinkStatus[clientIdx].sock.write(writeData);
+        sendCmdToClient(id, gameEventList.EVENT_SETUP, writeData, writeData.length);
     })
 }
 
@@ -553,7 +546,7 @@ function sendCmdToClient(id, cmd, cmdData, len) {
     writeData.writeUInt16LE(len, dataIdx);
     dataIdx += 2;
     //data checksum
-    checksum = crc32.buf(cmdData);
+    checksum = crc32.buf(cmdData) >>> 0;
     writeData.writeUInt32LE(checksum, dataIdx);
     dataIdx += 4;
     
@@ -622,6 +615,7 @@ function eventCash2BCDAck(clientId, cmdData) {
         if (err) {
             console.log('generate BCDCode fail');
         } else {
+            console.log("BCD:%s", bcdcode);
             sendCmdToClient(clientId, gameEventList.EVENT_CASH_2_BCD, bcdcode, bcdcode.length);
         }
     });
@@ -632,12 +626,15 @@ function eventCash2BCDAck(clientId, cmdData) {
  * 處理票券轉換成現金的事件
  */
 function eventBCD2CashAck(clientId, cmdData) {
-    var bcdcode = cmdData.readUInt8();
-    db.getTicketCashValue(clientId, bcdcode, function (err, cashValue) {
+    let cashData = new Buffer(8);
+
+    db.getTicketCashValue(clientId, cmdData, function (err, cashValue) {
         if (err) {
             console.log('get ticket cash value fail');
         } else {
-            sendCmdToClient(clientId, gameEventList.EVENT_BCD_2_CASH, cashValue, cashValue.length);
+            console.log("cashValue:", cashValue);
+            cashData.writeDoubleLE(cashValue);
+            sendCmdToClient(clientId, gameEventList.EVENT_BCD_2_CASH, cashData, cashData.length);
         }
     });
 
