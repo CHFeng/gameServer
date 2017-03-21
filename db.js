@@ -289,29 +289,23 @@ exports.getTicketCashValue = function (clientId, bcdcode, callback) {
             callback(err, -1);
         }
         if (doc) {
-            if (doc.TicketState !== 9) {
-                doc.TicketState = 9;
-                doc.save(function (err, model) {
+            if (doc.TicketState !== 0) {
+                var ticketIndata = new TicketRecords({
+                    TicketNO: '',
+                    TicketState: 0,
+                    TicketAmount: 1,
+                    TicketValue: doc.TicketValue,
+                    TraceNO: doc.TicketNO,
+                    ExchangeTime: new Date(),
+                    Creator: '分機:' + clientId,
+                    ClientID: clientId,
+                    Description: '分機:' + clientId + '讀取彩票'
+                });
+                ticketIndata.save(function (err, model) {
                     if (err) {
                         callback(err, -1);
                     }
-                    var ticketIndata = new TicketRecords({
-                        TicketNO: '',
-                        TicketState: 0,
-                        TicketAmount: 1,
-                        TicketValue: model.TicketValue,
-                        TraceNO: model.TicketNO,
-                        ExchangeTime: new Date(),
-                        Creator: '分機:' + clientId,
-                        ClientID: clientId,
-                        Description: '分機:' + clientId + '讀取彩票'
-                    });
-                    ticketIndata.save(function (err) {
-                        if (err) {
-                            callback(err, -1);
-                        }
-                        callback(err, model.TicketValue);
-                    });
+                    callback(err, model.TicketValue);
                 });
             } else {
                 callback(err, -1);
