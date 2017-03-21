@@ -6,13 +6,14 @@ const MAX_CLIENT_NUM = 100;
 const db = require("./db.js");
 const randBuf = require("./randBuf/randBuf.js");
 const fs = require("fs");
+const crc32 = require("crc-32");
 
 /** 水池相關資訊保留檔案的路徑 */
 const reserveDataPath = "./randBuf/randBufVal";
 /** 週期性檢查連線獎項與將水池資訊寫入檔案的時間ms */
 const CHECK_PERIOD = 1000;
 /** 與分機通訊的資料Header長度 */
-const GAME_HEADER_LEN = 4;
+const GAME_HEADER_LEN = 8;
 /** 與web通訊的資料Hedaer長度 */
 const WEB_HEADER_LEN = 3;
 /** 與分機通訊的命令事件列表 */
@@ -292,14 +293,20 @@ function webUpdateBufSetting(cmdData) {
  * 與分機板之間的通訊處理
  */
 exports.gameParser = function (clientIdx, data) {
-    let clientId, cmd, dataLen, cmdData;
+    let clientId, cmd, dataLen, cmdData, checksum;
 
     if (data.length < GAME_HEADER_LEN) return;
 
     clientId = data.readUInt8();
     cmd = data.readUInt8(1);
     dataLen = data.readUInt16LE(2);
+    checksum = data.readUInt32LE(4);
     cmdData = data.slice(GAME_HEADER_LEN);
+
+    //判斷資料的checksum是否正確
+    if (crc32.buf(cmdData) != checksum) {
+        console.log("checksumError %d %d", crc32.buf(cmdData), checksum)
+    }
 
     switch (cmd) {
         case gameEventList.EVENT_ACCOUNT:
@@ -535,7 +542,7 @@ function eventJpPrizeAck(clientId, cmdData) {
  */
 function sendCmdToClient(id, cmd, cmdData, len) {
     let writeData = new Buffer(GAME_HEADER_LEN + len);
-    let i, dataIdx = 0;
+    let i, dataIdx = 0, checksum;
 
     writeData.fill(0);
     //sendId
@@ -545,6 +552,11 @@ function sendCmdToClient(id, cmd, cmdData, len) {
     //command data length
     writeData.writeUInt16LE(len, dataIdx);
     dataIdx += 2;
+    //data checksum
+    checksum = crc32.buf(cmdData);
+    writeData.writeUInt32LE(checksum, dataIdx);
+    dataIdx += 4;
+    
     //update lock status event
     for (i = 0; i < len; i++) {
         writeData.writeUInt8(cmdData[i], dataIdx++);
