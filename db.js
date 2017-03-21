@@ -291,11 +291,27 @@ exports.getTicketCashValue = function (clientId, bcdcode, callback) {
         if (doc) {
             if (doc.TicketState !== 9) {
                 doc.TicketState = 9;
-                doc.save(function (err) {
+                doc.save(function (err, model) {
                     if (err) {
                         callback(err, -1);
                     }
-                    callback(err, doc.TicketValue);
+                    var ticketIndata = new TicketRecords({
+                        TicketNO: '',
+                        TicketState: 0,
+                        TicketAmount: 1,
+                        TicketValue: model.TicketValue,
+                        TraceNO: model.TicketNO,
+                        ExchangeTime: new Date(),
+                        Creator: '分機:' + clientId,
+                        ClientID: clientId,
+                        Description: '分機:' + clientId + '讀取彩票'
+                    });
+                    ticketIndata.save(function (err) {
+                        if (err) {
+                            callback(err, -1);
+                        }
+                        callback(err, model.TicketValue);
+                    });
                 });
             } else {
                 callback(err, -1);
