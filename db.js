@@ -282,7 +282,6 @@ exports.generateTicketBCD = function (clientId, cashvalue, callback) {
 /**取得彩票金額 */
 exports.getTicketCashValue = function (clientId, bcdcode, callback) {
     TicketRecords.findOne({
-        ClientID: clientId,
         TicketNO: bcdcode
     }, function (err, doc) {
         if (err) {

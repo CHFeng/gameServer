@@ -1,0 +1,11 @@
+{
+  "name": "gameserver",
+  "displayName": "Lucky Game Server",
+  "icon": "images/spellIcon.svg",
+  "version": "0.0.0",
+  "publisher": "LGT",
+  "dependencies": {
+    "crc-32": "^1.0.1",
+    "mongoose": "^4.9.2"
+  }
+}
