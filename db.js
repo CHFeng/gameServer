@@ -1,10 +1,11 @@
+"use strict";
 /**
  * 將相關資訊寫入資料庫
  */
-
+const dblink = require('./config').dblink;
 var mongoose = require('mongoose');
 /** use mongoose to connect mongoDB */
-mongoose.connect('mongodb://192.168.1.129/GMS');
+mongoose.connect(dblink);
 //mongoose.connect('mongodb://localhost/GMS');
 
 /** account record data struct */
