@@ -453,7 +453,7 @@ function eventSetup(id, cmdData, clientIdx) {
         cmdData = cmdData.slice(0, 10);
     }
 
-    db.readGameSetup(id, cmdData, function (gameSetup, gameVersionId) {
+    db.readGameSetup(id, cmdData.toString(), function (gameSetup, gameVersionId) {
         let writeData = new Buffer(26 + gameSetup.length);
         let dataIdx = 0;
         let curTime = new Date();
@@ -549,7 +549,7 @@ function sendCmdToClient(id, cmd, cmdData, len) {
     checksum = crc32.buf(cmdData) >>> 0;
     writeData.writeUInt32LE(checksum, dataIdx);
     dataIdx += 4;
-    
+
     //update lock status event
     for (i = 0; i < len; i++) {
         writeData.writeUInt8(cmdData[i], dataIdx++);
