@@ -207,7 +207,7 @@ exports.webParser = function (sock, data) {
         case webEventList.EVENT_UPDATE_SETUP: //執行分機更新設定頁
             if (cmdData.length == 11) {
                 for (i = 0; i < clientlinkStatus.length; i++) {
-                    if (clientlinkStatus[i].clientId = cmdData.readUInt8()) {
+                    if (clientlinkStatus[i].clientId === cmdData.readUInt8()) {
                         eventSetup(cmdData.readUInt8(), cmdData.slice(1), i);
                     }
                 }
