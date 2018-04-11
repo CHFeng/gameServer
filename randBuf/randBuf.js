@@ -1,9 +1,9 @@
 "use strict";
-
 const randBuf = require('./randBuf.node');
 const fs = require("fs");
+const path = require("path");
 /** 水池相關資訊保留檔案的路徑 */
-const reserveDataPath = "./randBuf/randBufVal";
+const reserveDataPath =path.join(__dirname,"randBufVal");
 /** 分機最大數量 */
 const MAX_CLIENT_NUM = 100;
 
@@ -22,18 +22,18 @@ function writeBufValToFile() {
 
     for (i = 0; i < 5; i++) {
         for (j = 0; j < 4; j++) {
-            fileBuf.writeDoubleLE(bufValue.yBuf[i*4+j], (i*2*4 + 2*j)*8);
-            fileBuf.writeDoubleLE(bufValue.yBufThreshold[i*4+j], 8 + (i*2*4 + 2*j)*8);
+            fileBuf.writeDoubleLE(bufValue.yBuf[i * 4 + j], (i * 2 * 4 + 2 * j) * 8);
+            fileBuf.writeDoubleLE(bufValue.yBufThreshold[i * 4 + j], 8 + (i * 2 * 4 + 2 * j) * 8);
         }
     }
 
     for (i = 0; i < 3; i++) {
-        fileBuf.writeDoubleLE(bufValue.zBuf[i], 320 + (6*i)*8);
-        fileBuf.writeDoubleLE(bufValue.zBufThreshold[i], 328 + (6*i)*8);
-        fileBuf.writeDoubleLE(bufValue.jpScore[i], 336 + (6*i)*8);
-        fileBuf.writeDoubleLE(bufValue.jpBase[i], 344 + (6*i)*8);
-        fileBuf.writeDoubleLE(bufValue.jpMax[i], 352 + (6*i)*8);
-        fileBuf.writeDoubleLE(bufValue.jpMaxSet[i], 360 + (6*i)*8);
+        fileBuf.writeDoubleLE(bufValue.zBuf[i], 320 + (6 * i) * 8);
+        fileBuf.writeDoubleLE(bufValue.zBufThreshold[i], 328 + (6 * i) * 8);
+        fileBuf.writeDoubleLE(bufValue.jpScore[i], 336 + (6 * i) * 8);
+        fileBuf.writeDoubleLE(bufValue.jpBase[i], 344 + (6 * i) * 8);
+        fileBuf.writeDoubleLE(bufValue.jpMax[i], 352 + (6 * i) * 8);
+        fileBuf.writeDoubleLE(bufValue.jpMaxSet[i], 360 + (6 * i) * 8);
     }
 
     fileBuf.writeUInt32LE(bufValue.MaxBet, 464);
@@ -59,8 +59,8 @@ function readBufValFromFile() {
         bufValue.yBufThreshold = [];
         for (i = 0; i < 5; i++) {
             for (j = 0; j < 4; j++) {
-                bufValue.yBuf[i*4+j] = 0.0;
-                bufValue.yBufThreshold[i*4+j] = 0.0;
+                bufValue.yBuf[i * 4 + j] = 0.0;
+                bufValue.yBufThreshold[i * 4 + j] = 0.0;
             }
         }
 
@@ -89,8 +89,8 @@ function readBufValFromFile() {
         bufValue.yBufThreshold = [];
         for (i = 0; i < 5; i++) {
             for (j = 0; j < 4; j++) {
-                bufValue.yBuf[i*4+j] = fileContent.readDoubleLE((i*2*4 + 2*j) * 8);
-                bufValue.yBufThreshold[i*4+j] = fileContent.readDoubleLE(8 + (i*2*4 + 2*j) * 8);
+                bufValue.yBuf[i * 4 + j] = fileContent.readDoubleLE((i * 2 * 4 + 2 * j) * 8);
+                bufValue.yBufThreshold[i * 4 + j] = fileContent.readDoubleLE(8 + (i * 2 * 4 + 2 * j) * 8);
             }
         }
 
@@ -101,12 +101,12 @@ function readBufValFromFile() {
         bufValue.jpMax = [];
         bufValue.jpMaxSet = [];
         for (i = 0; i < 3; i++) {
-            bufValue.zBuf[i] = fileContent.readDoubleLE(320 + (6*i*8));
-            bufValue.zBufThreshold[i] = fileContent.readDoubleLE(328 + (6*i*8));
-            bufValue.jpScore[i] = fileContent.readDoubleLE(336 + (6*i*8));
-            bufValue.jpBase[i] = fileContent.readDoubleLE(344 + (6*i*8));
-            bufValue.jpMax[i] = fileContent.readDoubleLE(352 + (6*i*8));
-            bufValue.jpMaxSet[i] = fileContent.readDoubleLE(360 + (6*i*8));
+            bufValue.zBuf[i] = fileContent.readDoubleLE(320 + (6 * i * 8));
+            bufValue.zBufThreshold[i] = fileContent.readDoubleLE(328 + (6 * i * 8));
+            bufValue.jpScore[i] = fileContent.readDoubleLE(336 + (6 * i * 8));
+            bufValue.jpBase[i] = fileContent.readDoubleLE(344 + (6 * i * 8));
+            bufValue.jpMax[i] = fileContent.readDoubleLE(352 + (6 * i * 8));
+            bufValue.jpMaxSet[i] = fileContent.readDoubleLE(360 + (6 * i * 8));
         }
 
         bufValue.MaxBet = fileContent.readUInt32LE(464);
@@ -129,11 +129,11 @@ function randBufInit(periodCheckBuf) {
 
     //初始化分機資訊
     randBuf.clientInfo = {
-        linkPrizeCount:[],
-        credit:[],
-        totalProfit:[],
-        addToLinkBuf:[],
-        linkState:[]
+        linkPrizeCount: [],
+        credit: [],
+        totalProfit: [],
+        addToLinkBuf: [],
+        linkState: []
     };
 
     for (i = 0; i < MAX_CLIENT_NUM; i++) {
