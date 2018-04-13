@@ -46,8 +46,16 @@ const gameEventList = {
     EVENT_CASH_2_BCD: 13,
     /** 分機向主機索取票券的金額 */
     EVENT_BCD_2_CASH: 14,
+    /** 分機向主機索取點菜內容 */
+    EVENT_MENU:15,
+    /** 分機像主機發送點菜需求 */
+    EVENT_MENU_ORDER:16,
+    /** 分機向主機索取活動內容 */
+    EVENT_ACTIVITY:17,
+    /** 分機向主機索取幸運滾輪結果 */
+    EVENT_LUCKY_WHEEL_SPIN:18,
     /** HEARTBEAT */
-    EVENT_HEARTBEAT: 15
+    EVENT_HEARTBEAT: 19,
 };
 
 /** 與Web通訊的命令事件列表 */
@@ -367,6 +375,18 @@ exports.gameParser = function (clientIdx, data) {
         case gameEventList.EVENT_BCD_2_CASH:
             eventBCD2CashAck(clientId, cmdData);
             break;
+        case gameEventList.EVENT_MENU:
+            eventSendMenuData(clientId, cmdData);
+            break;
+        case gameEventList.EVENT_MENU_ORDER:
+            eventMenuOrder(clientId, cmdData);
+            break;
+        case gameEventList.EVENT_ACTIVITY:
+            eventSendActivityData(clientId, cmdData);
+            break;
+        case gameEventList.EVENT_LUCKY_WHEEL_SPIN:
+            eventLuckyWheelSpin(clientId, cmdData);
+            break;
         case gameEventList.EVENT_HEARTBEAT:
             let date = new Date();
             sendCmdToClient(clientId, gameEventList.EVENT_HEARTBEAT, 0, 0);
@@ -637,5 +657,33 @@ function eventBCD2CashAck(clientId, cmdData) {
             sendCmdToClient(clientId, gameEventList.EVENT_BCD_2_CASH, cashData, cashData.length);
         }
     });
+
+}
+
+/**
+ * 回傳點菜單資訊給分機
+ */
+function eventSendMenuData(clientId, cmdData) {
+
+}
+
+/**
+ * 處理分機點菜事件
+ */
+function eventMenuOrder(clientId, cmdData) {
+
+}
+
+/**
+ * 傳送活動資訊給分機
+ */
+function eventSendActivityData(clientId, cmdData) {
+
+}
+
+/**
+ * 處理分機執行幸運滾輪的spin result
+ */
+function eventLuckyWheelSpin(clientId, cmdData) {
 
 }
