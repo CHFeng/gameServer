@@ -1,5 +1,4 @@
 "use strict";
-
 const SERVER_ID = 250;
 const NET_PROTOCOL_VER = 0x10;
 const MAX_CLIENT_NUM = 100;
@@ -7,9 +6,9 @@ const db = require("./db.js");
 const randBuf = require("./randBuf/randBuf.js");
 const fs = require("fs");
 const crc32 = require("crc-32");
-
+const path = require("path");
 /** 水池相關資訊保留檔案的路徑 */
-const reserveDataPath = "./randBuf/randBufVal";
+const reserveDataPath =path.join(__dirname,"randBuf/randBufVal");
 /** 週期性檢查連線獎項與將水池資訊寫入檔案的時間ms */
 const CHECK_PERIOD = 1000;
 /** 與分機通訊的資料Header長度 */
